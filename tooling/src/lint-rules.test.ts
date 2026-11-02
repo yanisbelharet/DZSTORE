@@ -71,6 +71,25 @@ describe('règles de dépendance entre packages', () => {
         "import { domainPackage } from '../../../packages/domain/src/index.ts';\n" +
           use('domainPackage'),
       ],
+      // Modules serveur de @dz/core (et génération d'identifiants pour le domaine)
+      [
+        'packages/domain/src/x.ts',
+        "import { createLogger } from '@dz/core/logger';\n" + use('createLogger'),
+      ],
+      [
+        'packages/domain/src/x.ts',
+        "import { sha256Hex } from '@dz/core/crypto';\n" + use('sha256Hex'),
+      ],
+      ['packages/domain/src/x.ts', "import { loadEnv } from '@dz/core/env';\n" + use('loadEnv')],
+      ['packages/domain/src/x.ts', "import { newId } from '@dz/core/ids';\n" + use('newId')],
+      [
+        'apps/admin/src/x.ts',
+        "import { createSecretBox } from '@dz/core/crypto';\n" + use('createSecretBox'),
+      ],
+      [
+        'apps/store/src/x.ts',
+        "import { createLogger } from '@dz/core/logger';\n" + use('createLogger'),
+      ],
     ])('%s : import interdit', async (file, code) => {
       expect(await boundaryViolations(file, code)).toEqual(['no-restricted-imports']);
     });
@@ -101,6 +120,18 @@ describe('règles de dépendance entre packages', () => {
         "import { contractsPackage } from '@dz/contracts';\n" + use('contractsPackage'),
       ],
       ['apps/api/src/x.ts', use("fetch('https://example.test')")],
+      // Parties pures de @dz/core
+      ['packages/domain/src/x.ts', "import { dzd } from '@dz/core/money';\n" + use('dzd')],
+      [
+        'packages/domain/src/x.ts',
+        "import { algiersDate } from '@dz/core';\n" + use('algiersDate'),
+      ],
+      ['apps/store/src/x.ts', "import { formatDzd } from '@dz/core/money';\n" + use('formatDzd')],
+      ['apps/admin/src/x.ts', "import { newId } from '@dz/core/ids';\n" + use('newId')],
+      [
+        'apps/api/src/x.ts',
+        "import { createLogger } from '@dz/core/logger';\n" + use('createLogger'),
+      ],
     ])('%s : autorisé', async (file, code) => {
       expect(await boundaryViolations(file, code)).toEqual([]);
     });

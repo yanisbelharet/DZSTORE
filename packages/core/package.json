@@ -5,7 +5,14 @@
   "description": "Socle partagé : configuration, logs, erreurs, identifiants, crypto, argent, temps.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./errors": "./src/errors.ts",
+    "./money": "./src/money.ts",
+    "./time": "./src/time.ts",
+    "./ids": "./src/ids.ts",
+    "./env": "./src/env.ts",
+    "./logger": "./src/logger.ts",
+    "./crypto": "./src/crypto.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
@@ -13,5 +20,10 @@
   },
   "devDependencies": {
     "@dz/config": "workspace:*"
+  },
+  "dependencies": {
+    "pino": "^10.4.0",
+    "uuid": "^14.0.3",
+    "zod": "^4.6.7"
   }
 }

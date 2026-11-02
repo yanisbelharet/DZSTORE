@@ -56,6 +56,16 @@ const NO_IO_MODULES = {
   message: `Le domaine est pur : aucune entrée/sortie (fichiers, réseau, processus) (${ARCHI}).`,
 };
 
+/** Modules de @dz/core réservés au serveur (Node) : configuration, logs, chiffrement. */
+const NO_SERVER_CORE = {
+  group: ['@dz/core/env', '@dz/core/logger', '@dz/core/crypto'],
+  message: `Module serveur de @dz/core : interdit dans le domaine et le navigateur (${ARCHI}).`,
+};
+const NO_CORE_IDS = {
+  group: ['@dz/core/ids'],
+  message: `Le domaine reçoit ses identifiants en paramètre, il ne les génère pas (${ARCHI}).`,
+};
+
 /** @param {...object} patterns */
 const restrictImports = (...patterns) => ({
   'no-restricted-imports': [
@@ -104,7 +114,7 @@ export default defineConfig(
   },
   {
     files: ['apps/store/**', 'apps/admin/**'],
-    rules: restrictImports(NO_DB, NO_DOMAIN),
+    rules: restrictImports(NO_DB, NO_DOMAIN, NO_SERVER_CORE),
   },
   {
     files: ['packages/core/**'],
@@ -131,7 +141,7 @@ export default defineConfig(
   {
     files: ['packages/domain/**'],
     rules: {
-      ...restrictImports(NO_DB, NO_IO_MODULES),
+      ...restrictImports(NO_DB, NO_IO_MODULES, NO_SERVER_CORE, NO_CORE_IDS),
       'no-restricted-globals': [
         'error',
         { name: 'fetch', message: 'Le domaine est pur : pas de réseau.' },
