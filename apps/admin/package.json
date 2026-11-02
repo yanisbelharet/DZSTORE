@@ -2,19 +2,44 @@
   "name": "@dz/admin",
   "version": "0.0.0",
   "private": true,
-  "description": "OMS et back-office (React + Vite, à partir de P0-09).",
+  "description": "OMS et back-office (React + Vite).",
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@dz/contracts": "workspace:*"
+    "@dz/contracts": "workspace:*",
+    "@tanstack/react-query": "^5.105.2",
+    "@tanstack/react-router": "^1.170.46",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "i18next": "^26.7.1",
+    "lucide-react": "^1.66.0",
+    "qrcode": "^1.5.4",
+    "radix-ui": "^1.8.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-i18next": "^17.1.11",
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.7.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@dz/config": "workspace:*"
+    "@dz/config": "workspace:*",
+    "@dz/db": "workspace:*",
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.5"
   }
 }

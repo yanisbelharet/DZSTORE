@@ -1,4 +1,5 @@
 import type {} from '@fastify/cookie';
+import { PERMISSIONS, permissionsOf } from '@dz/domain';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 
@@ -30,7 +31,14 @@ const twoFactorDto = z.enum([
   'verification_required',
   'enrolment_required',
 ]);
-const meDto = z.object({ user: userDto, twoFactor: twoFactorDto, totpEnabled: z.boolean() });
+const meDto = z.object({
+  user: userDto,
+  twoFactor: twoFactorDto,
+  totpEnabled: z.boolean(),
+  /** Granted permissions: the admin UI shows or hides features with them (the API enforces). */
+  permissions: z.array(z.enum(PERMISSIONS)),
+  storeIds: z.union([z.literal('all'), z.array(z.string())]),
+});
 
 function me(auth: AuthContext) {
   return {
@@ -43,6 +51,8 @@ function me(auth: AuthContext) {
     },
     twoFactor: auth.twoFactor,
     totpEnabled: auth.totpEnabled,
+    permissions: permissionsOf(auth.roles),
+    storeIds: auth.storeIds,
   };
 }
 

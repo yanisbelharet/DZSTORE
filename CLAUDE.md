@@ -24,8 +24,11 @@ IA. Qualité production exigée.
 commit) · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build` · `pnpm format` · `pnpm dev` ·
 `pnpm db:local` (PostgreSQL local + bases `dz_dev`/`dz_test`) · `pnpm db:generate` (client Prisma) ·
 `pnpm db:migrate` (nouvelle migration en dev) · `pnpm db:deploy` (appliquer les migrations) ·
-`pnpm --filter @dz/api dev` (API locale) · `pnpm --filter @dz/api worker:dev` (worker local) · `pnpm --filter @dz/api create-owner --email … --name …`.
-À venir : `pnpm test:e2e`, `pnpm db:seed` (ajoutées ici quand elles existent).
+`pnpm --filter @dz/api dev` (API locale) · `pnpm --filter @dz/api worker:dev` (worker local) ·
+`pnpm --filter @dz/api create-owner --email … --name …` · `pnpm --filter @dz/admin dev` (admin,
+proxy `/api` → API locale) · `pnpm test:e2e` (Playwright : API + admin réels sur la base `dz_e2e`
+recréée ; `pnpm fix` corrige lint + format).
+À venir : `pnpm db:seed` (ajoutée ici quand elle existe).
 Migrations : toute contrainte non exprimable en Prisma est ajoutée en SQL dans la migration et
 listée dans ARCHITECTURE §3 ; jamais de modification d'une migration déjà poussée.
 

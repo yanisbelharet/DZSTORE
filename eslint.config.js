@@ -4,6 +4,7 @@
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import { defineConfig } from 'eslint/config';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -169,6 +170,26 @@ export default defineConfig(
         },
       ],
     },
+  },
+  {
+    files: ['apps/admin/src/**/*.{ts,tsx}'],
+    extends: [reactHooks.configs.flat['recommended-latest']],
+    languageOptions: { globals: globals.browser },
+    rules: {
+      // TanStack Router's documented API: `throw redirect(...)` (a Response, not an Error).
+      '@typescript-eslint/only-throw-error': [
+        'error',
+        { allow: [{ from: 'package', package: '@tanstack/router-core', name: 'Redirect' }] },
+      ],
+    },
+  },
+  {
+    // Tooling files of the admin (Vite, Playwright, e2e): typechecked by tsconfig.node.json.
+    // End-to-end tests prepare their own database, hence the database import.
+    files: ['apps/admin/*.config.ts', 'apps/admin/e2e/**/*.ts'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: { globals: globals.node },
+    rules: restrictImports(),
   },
   prettier,
 );

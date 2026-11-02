@@ -108,6 +108,8 @@ describe('connexion', () => {
     const me = await get(server, '/v1/auth/me', sessionCookie(res));
     expect(me.statusCode).toBe(200);
     expect(me.json()).toMatchObject({ user: { id: user.id, roles: ['CONFIRMATION_AGENT'] } });
+    expect(me.json<{ permissions: string[] }>().permissions).toContain('orders.confirm');
+    expect(me.json<{ permissions: string[] }>().permissions).not.toContain('users.manage');
   });
 
   it('mauvais mot de passe et compte inconnu : même réponse 401', async () => {

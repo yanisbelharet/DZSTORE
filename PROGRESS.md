@@ -4,13 +4,13 @@
 > chaque tâche (`/tache`) et de chaque session (`/fin-session`).
 
 ## État actuel
-- **Phase** : 0 — Fondations (en cours : 8/12 tâches).
+- **Phase** : 0 — Fondations (en cours : 9/12 tâches).
 - **Mode** : enchaînement autonome de la Phase 0 sans validation des plans (accord du propriétaire
   le 2026-11-02) ; arrêt uniquement sur blocage ou décision qui lui revient.
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : `/tache P0-09` (admin : coquille).
+- **Prochaine action** : `/tache P0-10` (store : coquille).
 
 ## File d'attente — Phase 0 (détails et critères : `docs/ROADMAP.md`)
 1. ~~P0-01 — Monorepo et outillage qualité~~ ✅
@@ -21,7 +21,7 @@
 6. ~~P0-06 — Authentification (sessions, Argon2id, TOTP, limitation de débit)~~ ✅
 7. ~~P0-07 — RBAC, périmètre boutique, audit, gestion des utilisateurs~~ ✅
 8. ~~P0-08 — Worker : jobs, outbox, retries, dead-letter~~ ✅
-9. P0-09 — Admin : coquille (fr/en, connexion + 2FA, utilisateurs, palette)
+9. ~~P0-09 — Admin : coquille (fr/en, connexion + 2FA, utilisateurs, palette)~~ ✅
 10. P0-10 — Store : coquille (résolution par hôte, ar RTL / fr, budgets Lighthouse)
 11. P0-11 — Seed déterministe et fabriques de test
 12. P0-12 — Déploiement de test sur Vercel + Neon (prérequis : comptes créés par le propriétaire)
@@ -30,6 +30,7 @@
 ## Terminé
 | Date | Élément | Commit |
 |---|---|---|
+| 2026-11-02 | **P0-09** — Admin React 19 + Vite 8 + TanStack Router/Query, Tailwind 4 : connexion, enrôlement et vérification 2FA (QR, codes de secours), coquille (navigation selon les permissions, sélecteur de boutique, fr/en, tiroir mobile), palette `Ctrl+K` et raccourcis, gestion des utilisateurs (liste filtrable, création, édition, actions critiques confirmées) ; `/v1/auth/me` renvoie permissions et boutiques ; pages chargées à la demande ; e2e Playwright (3 parcours réels, captures mobile/desktop) + job CI e2e ; 223 tests | voir `git log` |
 | 2026-11-02 | **P0-08** — File de jobs PostgreSQL maison (ADR-0023, remplace pg-boss) : diffusion outbox exactement une fois, backoff + jitter, dead-letter, report sans essai consommé, clé de concurrence (index unique partiel), bail, tâches planifiées, `runTick` (worker en boucle + `/v1/internal/tick`), admin des jobs en échec ; worker réel vérifié | voir `git log` |
 | 2026-11-02 | **P0-07** — RBAC : matrice du domaine (23 permissions × 4 rôles), règle d'accès obligatoire sur chaque route `/v1` (sinon démarrage refusé), contrôle en `onRequest` (403 avant validation), test automatique routes × rôles (prouvé par mutation) ; périmètre boutique dans la session ; gestion des comptes (ADMIN ne gère que les agents, révocation des sessions sur changement de droits) ; journal d'audit consultable ; script `create-owner` ; 203 tests | voir `git log` |
 | 2026-11-02 | **P0-06** — Auth : Argon2id (OWASP), sessions opaques hachées (cookie `__Host-` / Bearer mobile, liées au canal), inactivité 12 h / 7 j « se souvenir », absolue 30 j, révocation, verrouillage progressif, limitation de débit PostgreSQL, CSRF par en-tête, TOTP RFC 6238 maison (anti-rejeu, codes de secours), 2FA obligatoire OWNER/ADMIN, changement de mot de passe ; 175 tests | voir `git log` |
@@ -62,8 +63,6 @@
 - Node 22 par défaut dans le conteneur : Node 24.22.2 installé via nvm ; **préfixer chaque
   commande** par `export PATH=/root/.nvm/versions/node/v24.22.2/bin:$PATH` (pnpm 10.28 y est
   installé). Avec Node 22, `pnpm install` est refusé (engine-strict) — c'est voulu.
-- `pnpm build` n'exécute encore aucune tâche : aucune application n'est compilable avant P0-05
-  (API), P0-09 (admin), P0-10 (store).
 - Prettier ignore volontairement le Markdown (tableaux et diagrammes maintenus à la main).
 - Démon Docker **absent** du conteneur (client seul) ; **PostgreSQL 16 natif** → `pnpm db:local`
   le démarre et crée `dz_dev`/`dz_test` (à relancer à chaque nouvelle session : le cluster est
@@ -100,3 +99,12 @@
   argon2 fournissent des binaires linux/arm64 ; images construites pour amd64 et arm64.
 - Code portable test/production : adaptateur Astro, point d'entrée Fastify et mode des jobs
   (boucle/tick, ADR-0020) choisis par configuration — jamais de logique spécifique à Vercel.
+- Admin : `pnpm --filter @dz/admin dev` (Vite, proxy `/api` → `ADMIN_API_TARGET`, défaut
+  `http://localhost:3000`) ; garde d'accès UI = confort, l'API reste l'autorité. Textes UI
+  uniquement via les clés typées `src/i18n/{fr,en}.json` (une clé absente casse le typecheck).
+- E2E : `pnpm test:e2e` recrée la base `dz_e2e` (garde-fou : nom contenant `test`/`e2e`), crée
+  l'OWNER par la CLI de production, lance API (port 3101) + admin (5174). Chromium préinstallé
+  (`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`) ⇒ `@playwright/test` **épinglé à 1.63.0** ;
+  captures dans `apps/admin/test-results/screenshots/` (non versionnées, artefact CI).
+- Vitest : échec intermittent possible au premier run après un changement de lockfile (BUG-001) ;
+  relancer.
