@@ -19,10 +19,10 @@ IA. Qualité production exigée.
 - Bug découvert hors de la tâche en cours : le noter dans `BUGS.md`, ne pas le corriger en douce.
 - Bug touchant argent, stock, envoi transporteur ou pixels = **S1** + vérifier les données affectées.
 
-## Commandes (à la racine)
-`pnpm install` · `pnpm dev` · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm test:e2e` ·
-`pnpm build` · `pnpm db:migrate` · `pnpm db:seed` (les commandes exactes sont tenues à jour ici
-dès qu'elles existent).
+## Commandes (à la racine, Node 24 obligatoire)
+`pnpm install` · `pnpm check` (format + lint + typecheck + tests + build : à lancer avant chaque
+commit) · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build` · `pnpm format` · `pnpm dev`.
+À venir : `pnpm test:e2e`, `pnpm db:migrate`, `pnpm db:seed` (ajoutées ici quand elles existent).
 
 ## Conventions de code
 - TypeScript strict, pas de `any` ni de `as` non justifié ; Zod à **chaque frontière** (HTTP,
