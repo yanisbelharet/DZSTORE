@@ -1,0 +1,23 @@
+# PostgreSQL de développement local (machine avec Docker). Usage : `pnpm db:local`.
+# Identifiants locaux uniquement — jamais utilisés en test public ni en production.
+name: dz-commerce-os
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: dz
+      POSTGRES_PASSWORD: dz
+      POSTGRES_DB: dz_dev
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U dz -d dz_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  pgdata:
