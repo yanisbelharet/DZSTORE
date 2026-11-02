@@ -2,3 +2,9 @@ packages:
   - apps/*
   - packages/*
   - tooling
+
+# pnpm 10 n'exécute aucun script d'installation sans autorisation explicite.
+# Prisma télécharge son « schema engine » (migrations) à l'installation.
+onlyBuiltDependencies:
+  - '@prisma/engines'
+  - prisma

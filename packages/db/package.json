@@ -5,16 +5,26 @@
   "description": "Schéma Prisma, migrations, client et utilitaires de test.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
+    "postinstall": "prisma generate",
+    "generate": "prisma generate",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
-    "@dz/core": "workspace:*"
+    "@dz/core": "workspace:*",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
-    "@dz/config": "workspace:*"
+    "@dz/config": "workspace:*",
+    "@types/pg": "^8.23.1",
+    "prisma": "7.10.1"
   }
 }

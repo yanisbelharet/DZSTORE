@@ -2,15 +2,19 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "stream",
   "tasks": {
+    "generate": {
+      "outputs": ["src/generated/**"]
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "generate"],
       "outputs": ["dist/**"]
     },
     "typecheck": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": ["^typecheck", "generate"]
     },
     "test": {
-      "dependsOn": ["^test"]
+      "dependsOn": ["^test", "generate"],
+      "env": ["DATABASE_URL_TEST", "NODE_ENV"]
     },
     "dev": {
       "cache": false,

@@ -24,3 +24,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 *.log
+
+# Client Prisma généré (pnpm install / pnpm db:generate)
+**/src/generated/

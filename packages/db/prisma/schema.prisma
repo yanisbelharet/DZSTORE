@@ -1,0 +1,226 @@
+// DZ Commerce OS — schéma de base de données.
+// Conventions (ADR-0005) : UUIDv7, montants Int en DZD, timestamptz UTC, JSON validé par Zod.
+// Les modèles arrivent avec leur phase (voir docs/ARCHITECTURE.md, annexe A).
+// Contraintes non exprimables en Prisma : ajoutées en SQL dans les migrations (ARCHITECTURE §3).
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────── Enums ───────────────────────────────
+
+enum Role {
+  OWNER
+  ADMIN
+  CONFIRMATION_AGENT
+  FOLLOWUP_AGENT
+}
+
+enum Locale {
+  ar
+  fr
+  en
+}
+
+enum SessionKind {
+  WEB
+  MOBILE
+}
+
+enum ActorType {
+  USER
+  SYSTEM
+  CARRIER
+  CUSTOMER
+}
+
+enum SecretKind {
+  CARRIER_TOKEN
+  PIXEL_ACCESS_TOKEN
+  AI_API_KEY
+  TOTP_SECRET
+  OTHER
+}
+
+enum OutboxStatus {
+  PENDING
+  DISPATCHED
+  FAILED
+}
+
+// ──────────────────────────── Plateforme ────────────────────────────
+
+model Store {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  slug          String   @unique
+  name          String
+  orderPrefix   String   @unique // ex. "DZ" → DZ-000123
+  defaultLocale Locale   @default(ar)
+  locales       Locale[] @default([ar, fr])
+  timezone      String   @default("Africa/Algiers")
+  theme         Json     @default("{}") // ThemeSchema (Zod)
+  settings      Json     @default("{}") // StoreSettingsSchema (Zod)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+
+  domains    StoreDomain[]
+  counters   StoreCounter[]
+  userAccess UserStoreAccess[]
+}
+
+model StoreDomain {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  storeId   String   @db.Uuid
+  hostname  String   @unique // minuscules, sans port
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+model StoreCounter {
+  storeId String @db.Uuid
+  name    String // "order"
+  value   Int    @default(0)
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@id([storeId, name])
+}
+
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
+
+// ───────────────────────── Identité & sécurité ─────────────────────────
+
+model User {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  email            String    @unique // stocké en minuscules
+  name             String
+  passwordHash     String // Argon2id
+  roles            Role[]
+  locale           Locale    @default(fr)
+  isActive         Boolean   @default(true)
+  totpSecretId     String?   @unique @db.Uuid
+  totpEnabledAt    DateTime? @db.Timestamptz(3)
+  recoveryCodes    String[] // hachés
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime? @db.Timestamptz(3)
+  lastLoginAt      DateTime? @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(3)
+
+  totpSecret  Secret?           @relation("UserTotpSecret", fields: [totpSecretId], references: [id])
+  storeAccess UserStoreAccess[]
+  sessions    Session[]
+  auditLogs   AuditLog[]
+}
+
+model UserStoreAccess {
+  userId  String @db.Uuid
+  storeId String @db.Uuid
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, storeId])
+  @@index([storeId])
+}
+
+model Session {
+  id                String      @id @default(uuid(7)) @db.Uuid
+  userId            String      @db.Uuid
+  tokenHash         String      @unique // SHA-256 du jeton opaque
+  kind              SessionKind
+  twoFactorVerified Boolean     @default(false)
+  ipPrefix          String? // IP tronquée, pour l'écran « sessions actives »
+  userAgent         String?
+  createdAt         DateTime    @default(now()) @db.Timestamptz(3)
+  lastSeenAt        DateTime    @default(now()) @db.Timestamptz(3)
+  expiresAt         DateTime    @db.Timestamptz(3) // glissante
+  absoluteExpiresAt DateTime    @db.Timestamptz(3)
+  revokedAt         DateTime?   @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id          BigInt    @id @default(autoincrement())
+  at          DateTime  @default(now()) @db.Timestamptz(3)
+  actorType   ActorType
+  actorUserId String?   @db.Uuid
+  action      String // ex. "order.forceStatus", "secret.rotate"
+  entityType  String
+  entityId    String?
+  storeId     String?   @db.Uuid
+  ipPrefix    String?
+  before      Json?
+  after       Json?
+  meta        Json?
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([actorUserId, at])
+  @@index([action, at])
+}
+
+model Secret {
+  id         String     @id @default(uuid(7)) @db.Uuid
+  kind       SecretKind
+  ciphertext Bytes
+  iv         Bytes
+  authTag    Bytes
+  keyVersion Int
+  last4      String? // affichage masqué uniquement
+  createdAt  DateTime   @default(now()) @db.Timestamptz(3)
+  rotatedAt  DateTime?  @db.Timestamptz(3)
+
+  userTotp User? @relation("UserTotpSecret")
+}
+
+model IdempotencyKey {
+  scope       String // ex. "order.create:<storeId>"
+  key         String
+  requestHash String
+  statusCode  Int?
+  response    Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt   DateTime @db.Timestamptz(3)
+
+  @@id([scope, key])
+  @@index([expiresAt])
+}
+
+model OutboxEvent {
+  id            BigInt       @id @default(autoincrement())
+  type          String // ex. "order.statusChanged"
+  aggregateType String
+  aggregateId   String
+  payload       Json // identifiants uniquement, jamais de données personnelles
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  availableAt   DateTime     @default(now()) @db.Timestamptz(3)
+  dispatchedAt  DateTime?    @db.Timestamptz(3)
+  lastError     String?
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([status, availableAt])
+  @@index([aggregateType, aggregateId])
+}

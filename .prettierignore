@@ -8,3 +8,6 @@ docs/integrations/*.json
 
 # La documentation Markdown est maintenue à la main (tableaux, diagrammes)
 **/*.md
+
+# Code généré
+**/src/generated/

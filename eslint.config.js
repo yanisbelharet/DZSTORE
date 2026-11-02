@@ -82,6 +82,7 @@ export default defineConfig(
       '**/coverage/**',
       '**/.turbo/**',
       '**/.astro/**',
+      '**/src/generated/**',
       'docs/**',
     ],
   },
