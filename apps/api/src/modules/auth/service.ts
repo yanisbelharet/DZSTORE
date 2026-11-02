@@ -71,7 +71,10 @@ export async function login(deps: AuthDependencies, input: LoginInput) {
   const now = clock.now();
   const audit = { actorType: 'USER' as const, entityType: 'User', ipPrefix: ipPrefix(input.ip) };
 
-  const user = await db.user.findUnique({ where: { email: input.email } });
+  const user = await db.user.findUnique({
+    where: { email: input.email },
+    include: { storeAccess: { select: { storeId: true } } },
+  });
   if (!user?.isActive || (user.lockedUntil !== null && user.lockedUntil > now)) {
     await verifyAgainstDummy(input.password);
     await recordAudit(db, {

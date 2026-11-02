@@ -63,16 +63,17 @@ describe('API — format des erreurs', () => {
     server.post(
       '/v1/test/echo',
       {
+        config: { access: 'public' },
         schema: {
           body: z.object({ phone: z.string().regex(/^0[5-7]\d{8}$/u), qty: z.number().int() }),
         },
       },
       (request) => request.body,
     );
-    server.get('/v1/test/conflict', () => {
+    server.get('/v1/test/conflict', { config: { access: 'public' } }, () => {
       throw new AppError('CONFLICT', 'Order version mismatch', { details: { expected: 3 } });
     });
-    server.get('/v1/test/crash', () => {
+    server.get('/v1/test/crash', { config: { access: 'public' } }, () => {
       throw new Error('SELECT * FROM "User" WHERE password = secret failed');
     });
   };

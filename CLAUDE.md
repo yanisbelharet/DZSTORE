@@ -23,7 +23,8 @@ IA. Qualité production exigée.
 `pnpm install` · `pnpm check` (format + lint + typecheck + tests + build : à lancer avant chaque
 commit) · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build` · `pnpm format` · `pnpm dev` ·
 `pnpm db:local` (PostgreSQL local + bases `dz_dev`/`dz_test`) · `pnpm db:generate` (client Prisma) ·
-`pnpm db:migrate` (nouvelle migration en dev) · `pnpm db:deploy` (appliquer les migrations).
+`pnpm db:migrate` (nouvelle migration en dev) · `pnpm db:deploy` (appliquer les migrations) ·
+`pnpm --filter @dz/api dev` (API locale) · `pnpm --filter @dz/api create-owner --email … --name …`.
 À venir : `pnpm test:e2e`, `pnpm db:seed` (ajoutées ici quand elles existent).
 Migrations : toute contrainte non exprimable en Prisma est ajoutée en SQL dans la migration et
 listée dans ARCHITECTURE §3 ; jamais de modification d'une migration déjà poussée.
@@ -39,6 +40,8 @@ listée dans ARCHITECTURE §3 ; jamais de modification d'une migration déjà po
 - Prix, totaux, frais : **toujours recalculés côté serveur**.
 - Logique métier pure dans `packages/domain` (sans I/O), testée en unitaire.
 - Toute transition de statut de commande passe par le service unique de transition.
+- Toute route `/v1/*` déclare sa règle d'accès (`config.access`) ; le périmètre boutique est
+  appliqué dans la requête de données (`storeFilter`, `assertStoreAccess`), pas seulement en UI.
 - Effets externes (transporteur, CAPI, IA) uniquement via outbox → jobs idempotents.
 - CSS : propriétés logiques (`ms-*`, `pe-*`, `start`/`end`) pour le RTL ; aucun texte d'UI en dur
   (clés i18n).

@@ -1,5 +1,5 @@
 import { AppError } from '@dz/core/errors';
-import type { Role, Session, SessionKind, User } from '@dz/db';
+import type { Role, Session, SessionKind, User, UserStoreAccess } from '@dz/db';
 import type { FastifyRequest } from 'fastify';
 
 export type TwoFactorState =
@@ -16,6 +16,8 @@ export interface AuthContext {
   sessionKind: SessionKind;
   twoFactor: TwoFactorState;
   totpEnabled: boolean;
+  /** Stores this user may act on: every store for OWNER/ADMIN, the assigned ones for agents. */
+  storeIds: string[] | 'all';
 }
 
 declare module 'fastify' {
@@ -34,7 +36,13 @@ export function twoFactorState(user: User, session: Session): TwoFactorState {
   return user.totpEnabledAt ? 'verification_required' : 'enrolment_required';
 }
 
-export function toAuthContext(user: User, session: Session): AuthContext {
+export type UserWithStores = User & { storeAccess: Pick<UserStoreAccess, 'storeId'>[] };
+
+export function storeScopeOf(user: UserWithStores): string[] | 'all' {
+  return requiresTwoFactor(user.roles) ? 'all' : user.storeAccess.map((access) => access.storeId);
+}
+
+export function toAuthContext(user: UserWithStores, session: Session): AuthContext {
   return {
     userId: user.id,
     email: user.email,
@@ -45,7 +53,20 @@ export function toAuthContext(user: User, session: Session): AuthContext {
     sessionKind: session.kind,
     twoFactor: twoFactorState(user, session),
     totpEnabled: user.totpEnabledAt !== null,
+    storeIds: storeScopeOf(user),
   };
+}
+
+/** Prisma filter restricting a query to the stores of the caller (data-layer scoping). */
+export function storeFilter(auth: AuthContext): { in: string[] } | undefined {
+  return auth.storeIds === 'all' ? undefined : { in: auth.storeIds };
+}
+
+/** Out-of-scope resources look absent: no information leaks about other stores. */
+export function assertStoreAccess(auth: AuthContext, storeId: string): void {
+  if (auth.storeIds !== 'all' && !auth.storeIds.includes(storeId)) {
+    throw new AppError('NOT_FOUND', 'Resource not found');
+  }
 }
 
 /**

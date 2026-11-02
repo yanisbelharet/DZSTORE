@@ -63,6 +63,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = (
   app.post(
     '/login',
     {
+      config: { access: 'public' },
       schema: {
         tags: ['auth'],
         body: z.object({
@@ -119,26 +120,40 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = (
     },
   );
 
-  app.post('/logout', { schema: { tags: ['auth'] } }, async (request, reply) => {
-    if (request.auth) await revokeSession(deps.db, deps.clock, request.auth.sessionId);
-    reply.clearCookie(cookieName, { path: '/' });
-    return reply.status(204).send();
-  });
+  app.post(
+    '/logout',
+    { config: { access: 'public' }, schema: { tags: ['auth'] } },
+    async (request, reply) => {
+      if (request.auth) await revokeSession(deps.db, deps.clock, request.auth.sessionId);
+      reply.clearCookie(cookieName, { path: '/' });
+      return reply.status(204).send();
+    },
+  );
 
-  app.post('/logout-all', { schema: { tags: ['auth'] } }, async (request, reply) => {
-    const auth = requireAuth(request);
-    await revokeUserSessions(deps.db, deps.clock, auth.userId);
-    reply.clearCookie(cookieName, { path: '/' });
-    return reply.status(204).send();
-  });
+  app.post(
+    '/logout-all',
+    { config: { access: 'authenticated' }, schema: { tags: ['auth'] } },
+    async (request, reply) => {
+      const auth = requireAuth(request);
+      await revokeUserSessions(deps.db, deps.clock, auth.userId);
+      reply.clearCookie(cookieName, { path: '/' });
+      return reply.status(204).send();
+    },
+  );
 
-  app.get('/me', { schema: { tags: ['auth'], response: { 200: meDto } } }, (request) =>
-    me(requireAuth(request, { allowPendingTwoFactor: true })),
+  app.get(
+    '/me',
+    {
+      config: { access: 'authenticated', allowPendingTwoFactor: true },
+      schema: { tags: ['auth'], response: { 200: meDto } },
+    },
+    (request) => me(requireAuth(request, { allowPendingTwoFactor: true })),
   );
 
   app.get(
     '/sessions',
     {
+      config: { access: 'authenticated' },
       schema: {
         tags: ['auth'],
         response: {
@@ -181,6 +196,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = (
   app.post(
     '/2fa/setup',
     {
+      config: { access: 'authenticated', allowPendingTwoFactor: true },
       schema: {
         tags: ['auth'],
         response: { 200: z.object({ secret: z.string(), otpauthUrl: z.string() }) },
@@ -195,6 +211,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = (
   app.post(
     '/2fa/enable',
     {
+      config: { access: 'authenticated', allowPendingTwoFactor: true },
       schema: {
         tags: ['auth'],
         body: z.object({ code: totpCode }),
@@ -210,6 +227,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = (
   app.post(
     '/2fa/verify',
     {
+      config: { access: 'authenticated', allowPendingTwoFactor: true },
       schema: {
         tags: ['auth'],
         body: z
@@ -233,6 +251,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = (
   app.post(
     '/password',
     {
+      config: { access: 'authenticated' },
       schema: {
         tags: ['auth'],
         body: z.object({

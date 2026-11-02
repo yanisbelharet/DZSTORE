@@ -2,7 +2,9 @@ import { isIPv4, isIPv6 } from 'node:net';
 
 import type { Clock } from '@dz/core';
 import { randomToken, sha256Hex } from '@dz/core/crypto';
-import type { DbExecutor, Session, SessionKind, User } from '@dz/db';
+import type { DbExecutor, Session, SessionKind } from '@dz/db';
+
+import type { UserWithStores } from './context.ts';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -65,12 +67,12 @@ export async function findActiveSession(
   db: DbExecutor,
   clock: Clock,
   token: string,
-): Promise<{ session: Session; user: User } | null> {
+): Promise<{ session: Session; user: UserWithStores } | null> {
   if (token.length < 20 || token.length > 128) return null;
   const now = clock.now();
   const found = await db.session.findUnique({
     where: { tokenHash: sha256Hex(token) },
-    include: { user: true },
+    include: { user: { include: { storeAccess: { select: { storeId: true } } } } },
   });
   if (!found) return null;
   if (

@@ -1,6 +1,7 @@
 import { AppError, isAppError } from '@dz/core/errors';
 import type { ErrorCode, ErrorDetails } from '@dz/core/errors';
 import type { ApiError } from '@dz/contracts';
+import { Prisma } from '@dz/db';
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import {
   hasZodFastifySchemaValidationErrors,
@@ -9,7 +10,7 @@ import {
 
 const GENERIC_MESSAGES: Partial<Record<ErrorCode, string>> = {
   BAD_REQUEST: 'Malformed request',
-  NOT_FOUND: 'Route not found',
+  NOT_FOUND: 'Resource not found',
   PAYLOAD_TOO_LARGE: 'Request body too large',
   UNSUPPORTED_MEDIA_TYPE: 'Unsupported content type',
   RATE_LIMITED: 'Too many requests',
@@ -61,6 +62,12 @@ function mapError(error: unknown): MappedError {
           ...(error.details === undefined ? {} : { details: error.details }),
         }
       : generic(error.code === 'INVALID_CONFIGURATION' ? 'INTERNAL' : error.code);
+  }
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    // Safety net when a service did not translate the error itself.
+    if (error.code === 'P2002')
+      return { status: 409, code: 'CONFLICT', message: 'Resource already exists' };
+    if (error.code === 'P2025') return generic('NOT_FOUND');
   }
   if (isResponseSerializationError(error)) return generic('INTERNAL');
   const statusCode = (error as Partial<FastifyError>).statusCode;

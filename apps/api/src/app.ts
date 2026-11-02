@@ -16,11 +16,16 @@ import {
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
 import type { ApiConfig } from './config.ts';
+import { registerAccessControl } from './http/access.ts';
+import type { RouteAccess } from './http/access.ts';
 import { errorHandler, notFoundHandler } from './http/errors.ts';
 import { registerAccessLog, registerResponseHeaders } from './http/hooks.ts';
 import { requestIdFrom } from './http/request-id.ts';
 import { registerAuthentication } from './modules/auth/plugin.ts';
+import { auditRoutes } from './modules/audit/routes.ts';
 import { authRoutes } from './modules/auth/routes.ts';
+import { storesRoutes } from './modules/stores/routes.ts';
+import { usersRoutes } from './modules/users/routes.ts';
 import { healthRoutes } from './routes/health.ts';
 
 export interface AppDependencies {
@@ -75,6 +80,14 @@ export async function buildApp({
     credentials: true,
   });
 
+  // Order matters: cookies are parsed, then the session is resolved, then access rules are
+  // enforced — all before any route is registered (onRoute must see every /v1 route).
+  await app.register(cookie);
+  const authDeps = { db, clock, secretBox };
+  registerAuthentication(app, { ...authDeps, cookieSecure: config.cookieSecure });
+  const routeAccess = registerAccessControl(app);
+  app.decorate('routeAccess', routeAccess);
+
   await app.register(swagger, {
     openapi: {
       openapi: '3.1.0',
@@ -83,15 +96,16 @@ export async function buildApp({
     transform: jsonSchemaTransform,
   });
   if (config.docsEnabled) {
-    app.get('/v1/openapi.json', { schema: { hide: true } }, () => app.swagger());
+    app.get('/v1/openapi.json', { config: { access: 'public' }, schema: { hide: true } }, () =>
+      app.swagger(),
+    );
     await app.register(swaggerUi, { routePrefix: '/docs' });
   }
 
-  await app.register(cookie);
-  const authDeps = { db, clock, secretBox };
-  registerAuthentication(app, { ...authDeps, cookieSecure: config.cookieSecure });
-
   await app.register(healthRoutes, { checkDatabase, readyTimeoutMs });
+  await app.register(usersRoutes, { prefix: '/v1/users', deps: { db, clock } });
+  await app.register(storesRoutes, { prefix: '/v1/stores', db });
+  await app.register(auditRoutes, { prefix: '/v1/audit', db });
   await app.register(authRoutes, {
     prefix: '/v1/auth',
     deps: authDeps,
@@ -101,3 +115,10 @@ export async function buildApp({
 }
 
 export type App = Awaited<ReturnType<typeof buildApp>>;
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    /** Access rule of every `/v1/*` route (used by the RBAC matrix test). */
+    routeAccess: readonly RouteAccess[];
+  }
+}
