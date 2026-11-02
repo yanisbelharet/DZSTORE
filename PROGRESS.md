@@ -5,10 +5,10 @@
 
 ## État actuel
 - **Phase** : 0 — Fondations (non démarrée).
-- **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée.
-  **En attente de la validation explicite du propriétaire (étape D)** avant tout code.
-- **En cours** : —
-- **Prochaine action** : après validation, `/tache P0-01`.
+- **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
+  **validés par le propriétaire le 2026-11-02**.
+- **En cours** : P0-01 — plan soumis au propriétaire, en attente de son accord.
+- **Prochaine action** : implémenter P0-01 dès l'accord sur le plan.
 
 ## File d'attente — Phase 0 (détails et critères : `docs/ROADMAP.md`)
 1. P0-01 — Monorepo et outillage qualité
@@ -36,23 +36,24 @@
   données · push après chaque commit sur la branche de travail.
 - Doc EcoTrack officielle (Postman) figée en snapshot daté ; 🔶 à vérifier sur le compte réel.
 
+## Validé par le propriétaire (2026-11-02)
+- Hébergement (ADR-0013) : test gratuit Vercel + Neon (P0-12), production VPS avant toute vente.
+- Store Astro (ADR-0002), jobs sur PostgreSQL sans Redis (ADR-0006, ADR-0020).
+- Ordre de la roadmap (mise en production après P6) et hypothèses [H] du PRD §26.
+- Mode de travail : règle de `CLAUDE.md` inchangée — plan soumis si > 3 fichiers, schéma DB
+  ou API publique ; le propriétaire peut demander d'« enchaîner » à tout moment.
+
 ## À valider par le propriétaire
-1. ~~ADR-0013 (hébergement)~~ — **tranché le 2026-11-02** : test gratuit et non commercial sur
-   Vercel Hobby + Neon Free (P0-12) ; production sur un VPS choisi avant toute vente réelle (P6).
-   Actions propriétaire : créer les comptes Vercel et Neon avant P0-12.
-2. **ADR-0002 (store en Astro)** et **ADR-0006 (files sur PostgreSQL, sans Redis)**.
-3. **Ordre de la roadmap** : mise en production après P6 ; stock, paie, statistiques complètes,
-   builder et IA ensuite (paie et statistiques calculées rétroactivement depuis l'historique).
-4. Hypothèses [H] du PRD §26 (seuils anti-fraude, verrou 10 min, déclencheur Purchase par défaut
-   `ON_CONFIRMED`, validation transporteur manuelle par lot…).
-5. Mode de travail : validation du plan à chaque tâche (règle actuelle) ou enchaînement autonome
-   de la Phase 0 avec arrêt uniquement sur blocage.
+- Plan de P0-01 (soumis le 2026-11-02).
 
 ## Pièges et notes techniques
 - Le serveur MCP GitHub ne s'est pas connecté dans la session 1 ; `git push` fonctionne.
 - Conteneur cloud éphémère : tout doit être commité **et poussé** avant la fin d'une session.
-- Node 22 dans le conteneur de la session 1 (cible : Node 24 LTS, à installer en P0-01).
-- Docker non vérifié dans le conteneur : prévoir PostgreSQL natif en repli (P0-02).
+- Node 22 par défaut dans le conteneur ; Node 24 LTS installable via `nvm` (nodejs.org joignable).
+- Démon Docker **absent** du conteneur (client seul) ; **PostgreSQL 16 natif installé** → base
+  locale native pour les tests ; CI et production en PostgreSQL 17.
+- TypeScript 7 publié mais non supporté par typescript-eslint (< 6.1) → TypeScript 6.0.x.
+- Argon2 : `@node-rs/argon2` (binaires précompilés, dont linux-arm64, sans node-gyp).
 - Production possiblement en **ARM64** (si Oracle) : vérifier dès P0-01 que Prisma, sharp et
   argon2 fournissent des binaires linux/arm64 ; images construites pour amd64 et arm64.
 - Code portable test/production : adaptateur Astro, point d'entrée Fastify et mode des jobs
