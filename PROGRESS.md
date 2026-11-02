@@ -4,15 +4,15 @@
 > chaque tâche (`/tache`) et de chaque session (`/fin-session`).
 
 ## État actuel
-- **Phase** : 0 — Fondations (en cours : 1/12 tâches).
+- **Phase** : 0 — Fondations (en cours : 2/12 tâches).
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : `/tache P0-02` (environnement local + CI) — plan à soumettre.
+- **Prochaine action** : `/tache P0-03` (package `core`) — plan à soumettre.
 
 ## File d'attente — Phase 0 (détails et critères : `docs/ROADMAP.md`)
 1. ~~P0-01 — Monorepo et outillage qualité~~ ✅
-2. P0-02 — Environnement local et intégration continue
+2. ~~P0-02 — Environnement local et intégration continue~~ ✅
 3. P0-03 — Package `core` (env, logger avec rédaction, erreurs, ids, crypto, argent, temps)
 4. P0-04 — Package `db` : Prisma et schéma socle
 5. P0-05 — API HTTP : squelette Fastify
@@ -28,6 +28,7 @@
 ## Terminé
 | Date | Élément | Commit |
 |---|---|---|
+| 2026-11-02 | **P0-02** — CI GitHub Actions (format, lint, typecheck, tests, build, service PostgreSQL 17, actions épinglées par SHA) ; `pnpm db:local` (Docker ou PostgreSQL natif, bases `dz_dev`/`dz_test`, idempotent) ; **CI run n°1 verte en 52 s** (37 tests exécutés, PostgreSQL 17.11) | `a15d448` |
 | 2026-11-02 | **P0-01** — monorepo pnpm + Turborepo, TypeScript 6 strict, ESLint 10 typé + frontières entre packages (24 tests), Prettier, squelettes des 7 packages/apps, Node 24 imposé ; `pnpm check` vert, clone neuf vérifié | `39bd432` |
 | 2026-11-02 | Session 1 — kit reconstruit (CLAUDE.md, PRD, ROADMAP, DECISIONS, 11 skills, doc EcoTrack + snapshot officiel), ARCHITECTURE.md (schéma Prisma validé, diagrammes Mermaid vérifiés) | voir `git log` |
 
@@ -56,8 +57,11 @@
 - `pnpm build` n'exécute encore aucune tâche : aucune application n'est compilable avant P0-05
   (API), P0-09 (admin), P0-10 (store).
 - Prettier ignore volontairement le Markdown (tableaux et diagrammes maintenus à la main).
-- Démon Docker **absent** du conteneur (client seul) ; **PostgreSQL 16 natif installé** → base
-  locale native pour les tests ; CI et production en PostgreSQL 17.
+- Démon Docker **absent** du conteneur (client seul) ; **PostgreSQL 16 natif** → `pnpm db:local`
+  le démarre et crée `dz_dev`/`dz_test` (à relancer à chaque nouvelle session : le cluster est
+  arrêté au démarrage du conteneur) ; CI et production en PostgreSQL 17.
+- CI : résultat lisible via le connecteur GitHub (`actions_list` / `get_job_logs`). Les outils
+  binaires externes téléchargés (ex. actionlint) sont bloqués par les garde-fous de la session.
 - TypeScript 7 publié mais non supporté par typescript-eslint (< 6.1) → TypeScript 6.0.x.
 - Argon2 : `@node-rs/argon2` (binaires précompilés, dont linux-arm64, sans node-gyp).
 - Production possiblement en **ARM64** (si Oracle) : vérifier dès P0-01 que Prisma, sharp et
