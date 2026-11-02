@@ -1,0 +1,26 @@
+# Dépendances et builds
+node_modules/
+dist/
+build/
+.astro/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# Environnement et secrets (seul .env.example est versionné)
+.env
+.env.*
+!.env.example
+
+# Tests et outils
+playwright-report/
+test-results/
+.lighthouseci/
+
+# Système / éditeurs
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
