@@ -1,4 +1,5 @@
 import type { EnvSource } from '@dz/core/env';
+import { createSecretBox } from '@dz/core/crypto';
 import { createLogger } from '@dz/core/logger';
 import { createDbClient } from '@dz/db';
 
@@ -13,9 +14,8 @@ export async function createRuntime(source: EnvSource = process.env) {
   const app = await buildApp({
     config,
     logger,
-    checkDatabase: async () => {
-      await db.$queryRaw`SELECT 1`;
-    },
+    db,
+    secretBox: createSecretBox(config.encryptionKeys),
   });
   return {
     config,

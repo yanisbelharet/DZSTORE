@@ -4,13 +4,13 @@
 > chaque tâche (`/tache`) et de chaque session (`/fin-session`).
 
 ## État actuel
-- **Phase** : 0 — Fondations (en cours : 5/12 tâches).
+- **Phase** : 0 — Fondations (en cours : 6/12 tâches).
 - **Mode** : enchaînement autonome de la Phase 0 sans validation des plans (accord du propriétaire
   le 2026-11-02) ; arrêt uniquement sur blocage ou décision qui lui revient.
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : `/tache P0-06` (authentification).
+- **Prochaine action** : `/tache P0-07` (RBAC, périmètre boutique, audit, utilisateurs).
 
 ## File d'attente — Phase 0 (détails et critères : `docs/ROADMAP.md`)
 1. ~~P0-01 — Monorepo et outillage qualité~~ ✅
@@ -18,7 +18,7 @@
 3. ~~P0-03 — Package `core` (env, logger avec rédaction, erreurs, ids, crypto, argent, temps)~~ ✅
 4. ~~P0-04 — Package `db` : Prisma et schéma socle~~ ✅
 5. ~~P0-05 — API HTTP : squelette Fastify~~ ✅
-6. P0-06 — Authentification (sessions, Argon2id, TOTP, limitation de débit)
+6. ~~P0-06 — Authentification (sessions, Argon2id, TOTP, limitation de débit)~~ ✅
 7. P0-07 — RBAC, périmètre boutique, audit, gestion des utilisateurs
 8. P0-08 — Worker : jobs, outbox, retries, dead-letter
 9. P0-09 — Admin : coquille (fr/en, connexion + 2FA, utilisateurs, palette)
@@ -30,6 +30,7 @@
 ## Terminé
 | Date | Élément | Commit |
 |---|---|---|
+| 2026-11-02 | **P0-06** — Auth : Argon2id (OWASP), sessions opaques hachées (cookie `__Host-` / Bearer mobile, liées au canal), inactivité 12 h / 7 j « se souvenir », absolue 30 j, révocation, verrouillage progressif, limitation de débit PostgreSQL, CSRF par en-tête, TOTP RFC 6238 maison (anti-rejeu, codes de secours), 2FA obligatoire OWNER/ADMIN, changement de mot de passe ; 175 tests | voir `git log` |
 | 2026-11-02 | **P0-05** — API Fastify : `buildApp` injectable, config validée, erreurs uniformes (404/400/413/415/422/500 sans fuite), en-têtes de sécurité, CORS fermé, request-id, journal d'accès sans IP, `/health`, `/ready` (vraie base), OpenAPI 3.1 hors prod, serveur Node avec arrêt propre + entrée serverless ; ADR-0022 (pas de bundle) ; 143 tests | voir `git log` |
 | 2026-11-02 | **P0-04** — `@dz/db` : Prisma 7.10 (adaptateur pg), schéma socle (11 modèles), migration init + contraintes SQL, compteur atomique (100 incréments concurrents ⇒ 1..100), bases de test clonées depuis un modèle migré, contrôle de dérive ; 115 tests | `0f8562b` |
 | 2026-11-02 | **P0-03** — `@dz/core` : modules purs (`errors`, `money`, `time`, `ids`) et serveur (`env`, `logger` avec rédaction PII/secrets, `crypto` AES-256-GCM + rotation) ; frontières lint étendues ; 97 tests | `12afa1a` |
@@ -79,6 +80,10 @@
   de run ; après un crash, elles peuvent rester (sans risque, à supprimer à la main).
 - API : `pnpm --filter @dz/api dev` (charge le `.env` racine, `node --watch`) ; production
   `node src/main-http.ts` (ADR-0022). Après `eslint --fix`, toujours reformater : `pnpm fix`.
+- Auth : en-tête `x-dz-csrf: 1` obligatoire sur toute requête `/v1/*` mutante non-Bearer ;
+  `.env` local doit contenir `APP_ENCRYPTION_KEYS` (commande dans `.env.example`).
+- Premier enrôlement 2FA d'un OWNER/ADMIN : possible avec le seul mot de passe (pratique standard) ;
+  ces comptes sont créés par le propriétaire (P0-07).
 - Turbo 2 est en mode d'environnement strict : toute variable lue par une tâche doit être
   déclarée dans `turbo.json` (`env`), sinon elle n'arrive pas en CI.
 - Logs : un nom écrit en texte libre dans un message n'est pas détectable — ne jamais mettre de

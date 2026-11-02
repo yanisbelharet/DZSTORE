@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import { buildApp } from './app.ts';
 import type { App } from './app.ts';
-import { memoryLogger, testConfig, testDependencies } from './test/helpers.ts';
+import { CSRF, memoryLogger, testConfig, testDependencies } from './test/helpers.ts';
 
 let app: App | undefined;
 afterEach(async () => {
@@ -91,6 +91,7 @@ describe('API — format des erreurs', () => {
     const res = await server.inject({
       method: 'POST',
       url: '/v1/test/echo',
+      headers: CSRF,
       payload: { phone: '0999999999', qty: 1.5 },
     });
     expect(res.statusCode).toBe(422);
@@ -128,6 +129,7 @@ describe('API — format des erreurs', () => {
     const res = await server.inject({
       method: 'POST',
       url: '/v1/test/echo',
+      headers: CSRF,
       payload: { phone: '0555123456', qty: 1, filler: 'x'.repeat(200) },
     });
     expect(res.statusCode).toBe(413);
@@ -139,7 +141,7 @@ describe('API — format des erreurs', () => {
     const malformed = await server.inject({
       method: 'POST',
       url: '/v1/test/echo',
-      headers: { 'content-type': 'application/json' },
+      headers: { ...CSRF, 'content-type': 'application/json' },
       payload: '{"phone":',
     });
     expect(malformed.statusCode).toBe(400);
@@ -147,7 +149,7 @@ describe('API — format des erreurs', () => {
     const xml = await server.inject({
       method: 'POST',
       url: '/v1/test/echo',
-      headers: { 'content-type': 'application/xml' },
+      headers: { ...CSRF, 'content-type': 'application/xml' },
       payload: '<a/>',
     });
     expect(xml.statusCode).toBe(415);

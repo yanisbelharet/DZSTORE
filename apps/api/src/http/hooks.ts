@@ -1,17 +1,6 @@
-import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { FastifyBaseLogger, FastifyTypeProvider } from 'fastify';
 
-import type {
-  FastifyBaseLogger,
-  FastifyInstance,
-  FastifyTypeProvider,
-  RawServerDefault,
-} from 'fastify';
-
-/** Any app instance, whatever its logger and type provider. */
-type AnyApp<
-  Logger extends FastifyBaseLogger,
-  Provider extends FastifyTypeProvider,
-> = FastifyInstance<RawServerDefault, IncomingMessage, ServerResponse, Logger, Provider>;
+import type { AnyApp } from './types.ts';
 
 const API_CSP = "default-src 'none'; frame-ancestors 'none'";
 

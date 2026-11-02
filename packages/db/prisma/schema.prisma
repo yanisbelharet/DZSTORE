@@ -116,7 +116,8 @@ model User {
   isActive         Boolean   @default(true)
   totpSecretId     String?   @unique @db.Uuid
   totpEnabledAt    DateTime? @db.Timestamptz(3)
-  recoveryCodes    String[] // hachés
+  totpLastUsedStep Int? // anti-rejeu : dernier pas de temps TOTP accepté
+  recoveryCodes    String[] // hachés (SHA-256), à usage unique
   failedLoginCount Int       @default(0)
   lockedUntil      DateTime? @db.Timestamptz(3)
   lastLoginAt      DateTime? @db.Timestamptz(3)
@@ -146,6 +147,7 @@ model Session {
   tokenHash         String      @unique // SHA-256 du jeton opaque
   kind              SessionKind
   twoFactorVerified Boolean     @default(false)
+  remembered        Boolean     @default(false) // « se souvenir de cet appareil » : inactivité 7 j
   ipPrefix          String? // IP tronquée, pour l'écran « sessions actives »
   userAgent         String?
   createdAt         DateTime    @default(now()) @db.Timestamptz(3)
@@ -205,6 +207,18 @@ model IdempotencyKey {
   expiresAt   DateTime @db.Timestamptz(3)
 
   @@id([scope, key])
+  @@index([expiresAt])
+}
+
+/// Compteurs de limitation de débit par fenêtre fixe. Table UNLOGGED (migration SQL) :
+/// données éphémères, perdues sans conséquence en cas de crash.
+model RateLimitBucket {
+  key         String // empreinte SHA-256 de « <règle>:<identifiant> »
+  windowStart DateTime @db.Timestamptz(3)
+  count       Int      @default(0)
+  expiresAt   DateTime @db.Timestamptz(3)
+
+  @@id([key, windowStart])
   @@index([expiresAt])
 }
 

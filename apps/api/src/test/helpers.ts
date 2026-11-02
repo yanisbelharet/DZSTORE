@@ -1,4 +1,8 @@
+import { randomBytes } from 'node:crypto';
+
+import { createSecretBox, parseEncryptionKeys } from '@dz/core/crypto';
 import { createLogger } from '@dz/core/logger';
+import { createDbClient } from '@dz/db';
 
 import type { AppDependencies } from '../app.ts';
 import type { ApiConfig } from '../config.ts';
@@ -14,6 +18,8 @@ export function testConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
     bodyLimitBytes: 1024,
     trustProxy: false,
     docsEnabled: true,
+    encryptionKeys: parseEncryptionKeys(`1:${randomBytes(32).toString('base64')}`),
+    cookieSecure: true,
     ...overrides,
   };
 }
@@ -33,11 +39,20 @@ export function memoryLogger() {
   return { logger, lines };
 }
 
+/** Prisma connects lazily: unit tests that never query the database need no server. */
+const unusedDb = () => createDbClient({ url: 'postgresql://dz:dz@127.0.0.1:1/unused_test' });
+
 export function testDependencies(overrides: Partial<AppDependencies> = {}): AppDependencies {
+  const config = overrides.config ?? testConfig();
   return {
-    config: testConfig(),
+    config,
     logger: memoryLogger().logger,
+    db: unusedDb(),
+    secretBox: createSecretBox(config.encryptionKeys),
     checkDatabase: () => Promise.resolve(),
     ...overrides,
   };
 }
+
+/** Anti-CSRF header sent by first-party clients on mutating requests. */
+export const CSRF = { 'x-dz-csrf': '1' } as const;

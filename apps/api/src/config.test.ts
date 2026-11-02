@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 
 import { loadApiConfig } from './config.ts';
 
-const base = { DATABASE_URL: 'postgresql://dz:dz@localhost:5432/dz_dev' };
+const base = {
+  DATABASE_URL: 'postgresql://dz:dz@localhost:5432/dz_dev',
+  APP_ENCRYPTION_KEYS: `1:${Buffer.alloc(32, 7).toString('base64')}`,
+};
 
 describe('configuration de l’API', () => {
   it('valeurs par défaut sûres', () => {
@@ -16,7 +19,9 @@ describe('configuration de l’API', () => {
       bodyLimitBytes: 262_144,
       trustProxy: false,
       docsEnabled: true,
+      cookieSecure: true,
     });
+    expect(config.encryptionKeys.size).toBe(1);
   });
 
   it('lit la liste CORS, le port et la confiance proxy', () => {
@@ -39,5 +44,9 @@ describe('configuration de l’API', () => {
     expect(() => loadApiConfig({})).toThrow(AppError);
     expect(() => loadApiConfig({ ...base, PORT: '70000' })).toThrow(AppError);
     expect(() => loadApiConfig({ ...base, CORS_ORIGINS: 'not a url' })).toThrow(AppError);
+    expect(() => loadApiConfig({ DATABASE_URL: base.DATABASE_URL })).toThrow(
+      /APP_ENCRYPTION_KEYS/u,
+    );
+    expect(() => loadApiConfig({ ...base, APP_ENCRYPTION_KEYS: '1:short' })).toThrow(AppError);
   });
 });

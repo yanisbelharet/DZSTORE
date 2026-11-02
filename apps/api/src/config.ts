@@ -1,11 +1,14 @@
+import { parseEncryptionKeys } from '@dz/core/crypto';
+import type { KeyRing } from '@dz/core/crypto';
 import { baseEnvSchema, loadEnv } from '@dz/core/env';
 import type { EnvSource, LOG_LEVELS } from '@dz/core/env';
 import { z } from 'zod';
 
-const flag = z
-  .enum(['true', 'false'])
-  .default('false')
-  .transform((value) => value === 'true');
+const flag = (defaultValue: 'true' | 'false') =>
+  z
+    .enum(['true', 'false'])
+    .default(defaultValue)
+    .transform((value) => value === 'true');
 
 const originList = z
   .string()
@@ -32,7 +35,11 @@ export const apiEnvSchema = baseEnvSchema.extend({
   CORS_ORIGINS: originList,
   BODY_LIMIT_BYTES: z.coerce.number().int().min(1024).max(10_485_760).default(262_144),
   /** Trust X-Forwarded-* headers (behind Caddy, Cloudflare or Vercel). */
-  TRUST_PROXY: flag,
+  TRUST_PROXY: flag('false'),
+  /** `<version>:<base64 32 bytes>,…` — encrypts TOTP secrets and integration tokens (ADR-0009). */
+  APP_ENCRYPTION_KEYS: z.string().min(1, { error: 'required, see .env.example' }),
+  /** Secure session cookie (`__Host-` prefix). Only `false` for plain-http local setups. */
+  SESSION_COOKIE_SECURE: flag('true'),
 });
 
 export interface ApiConfig {
@@ -46,6 +53,8 @@ export interface ApiConfig {
   trustProxy: boolean;
   /** OpenAPI document and Swagger UI are never published in production. */
   docsEnabled: boolean;
+  encryptionKeys: KeyRing;
+  cookieSecure: boolean;
 }
 
 export function loadApiConfig(source: EnvSource = process.env): ApiConfig {
@@ -60,5 +69,7 @@ export function loadApiConfig(source: EnvSource = process.env): ApiConfig {
     bodyLimitBytes: env.BODY_LIMIT_BYTES,
     trustProxy: env.TRUST_PROXY,
     docsEnabled: env.NODE_ENV !== 'production',
+    encryptionKeys: parseEncryptionKeys(env.APP_ENCRYPTION_KEYS),
+    cookieSecure: env.SESSION_COOKIE_SECURE,
   };
 }

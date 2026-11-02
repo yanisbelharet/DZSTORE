@@ -1,7 +1,12 @@
+import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { systemClock } from '@dz/core';
+import type { Clock } from '@dz/core';
+import type { SecretBox } from '@dz/core/crypto';
 import type { Logger } from '@dz/core/logger';
+import type { DbClient } from '@dz/db';
 import { fastify, LogController } from 'fastify';
 import {
   jsonSchemaTransform,
@@ -14,13 +19,18 @@ import type { ApiConfig } from './config.ts';
 import { errorHandler, notFoundHandler } from './http/errors.ts';
 import { registerAccessLog, registerResponseHeaders } from './http/hooks.ts';
 import { requestIdFrom } from './http/request-id.ts';
+import { registerAuthentication } from './modules/auth/plugin.ts';
+import { authRoutes } from './modules/auth/routes.ts';
 import { healthRoutes } from './routes/health.ts';
 
 export interface AppDependencies {
   config: ApiConfig;
   logger: Logger;
-  /** Resolves when the database answers; used by `/ready`. */
-  checkDatabase: () => Promise<void>;
+  db: DbClient;
+  secretBox: SecretBox;
+  clock?: Clock;
+  /** Resolves when the database answers; used by `/ready` (default: `SELECT 1`). */
+  checkDatabase?: () => Promise<void>;
   readyTimeoutMs?: number;
 }
 
@@ -30,7 +40,12 @@ export const API_VERSION = '0.1.0';
 export async function buildApp({
   config,
   logger,
-  checkDatabase,
+  db,
+  secretBox,
+  clock = systemClock,
+  checkDatabase = async () => {
+    await db.$queryRaw`SELECT 1`;
+  },
   readyTimeoutMs = 2_000,
 }: AppDependencies) {
   const app = fastify({
@@ -72,7 +87,16 @@ export async function buildApp({
     await app.register(swaggerUi, { routePrefix: '/docs' });
   }
 
+  await app.register(cookie);
+  const authDeps = { db, clock, secretBox };
+  registerAuthentication(app, { ...authDeps, cookieSecure: config.cookieSecure });
+
   await app.register(healthRoutes, { checkDatabase, readyTimeoutMs });
+  await app.register(authRoutes, {
+    prefix: '/v1/auth',
+    deps: authDeps,
+    cookieSecure: config.cookieSecure,
+  });
   return app;
 }
 

@@ -13,7 +13,7 @@
     "test": "turbo run test",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
-    "fix": "eslint . --fix && prettier --write .",
+    "fix": "eslint . --fix; prettier --write .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:local": "bash scripts/dev-db.sh",
