@@ -4,13 +4,13 @@
 > chaque tâche (`/tache`) et de chaque session (`/fin-session`).
 
 ## État actuel
-- **Phase** : 0 — Fondations (en cours : 7/12 tâches).
+- **Phase** : 0 — Fondations (en cours : 8/12 tâches).
 - **Mode** : enchaînement autonome de la Phase 0 sans validation des plans (accord du propriétaire
   le 2026-11-02) ; arrêt uniquement sur blocage ou décision qui lui revient.
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : `/tache P0-08` (worker : jobs, outbox, retries, dead-letter).
+- **Prochaine action** : `/tache P0-09` (admin : coquille).
 
 ## File d'attente — Phase 0 (détails et critères : `docs/ROADMAP.md`)
 1. ~~P0-01 — Monorepo et outillage qualité~~ ✅
@@ -20,7 +20,7 @@
 5. ~~P0-05 — API HTTP : squelette Fastify~~ ✅
 6. ~~P0-06 — Authentification (sessions, Argon2id, TOTP, limitation de débit)~~ ✅
 7. ~~P0-07 — RBAC, périmètre boutique, audit, gestion des utilisateurs~~ ✅
-8. P0-08 — Worker : jobs, outbox, retries, dead-letter
+8. ~~P0-08 — Worker : jobs, outbox, retries, dead-letter~~ ✅
 9. P0-09 — Admin : coquille (fr/en, connexion + 2FA, utilisateurs, palette)
 10. P0-10 — Store : coquille (résolution par hôte, ar RTL / fr, budgets Lighthouse)
 11. P0-11 — Seed déterministe et fabriques de test
@@ -30,6 +30,7 @@
 ## Terminé
 | Date | Élément | Commit |
 |---|---|---|
+| 2026-11-02 | **P0-08** — File de jobs PostgreSQL maison (ADR-0023, remplace pg-boss) : diffusion outbox exactement une fois, backoff + jitter, dead-letter, report sans essai consommé, clé de concurrence (index unique partiel), bail, tâches planifiées, `runTick` (worker en boucle + `/v1/internal/tick`), admin des jobs en échec ; worker réel vérifié | voir `git log` |
 | 2026-11-02 | **P0-07** — RBAC : matrice du domaine (23 permissions × 4 rôles), règle d'accès obligatoire sur chaque route `/v1` (sinon démarrage refusé), contrôle en `onRequest` (403 avant validation), test automatique routes × rôles (prouvé par mutation) ; périmètre boutique dans la session ; gestion des comptes (ADMIN ne gère que les agents, révocation des sessions sur changement de droits) ; journal d'audit consultable ; script `create-owner` ; 203 tests | voir `git log` |
 | 2026-11-02 | **P0-06** — Auth : Argon2id (OWASP), sessions opaques hachées (cookie `__Host-` / Bearer mobile, liées au canal), inactivité 12 h / 7 j « se souvenir », absolue 30 j, révocation, verrouillage progressif, limitation de débit PostgreSQL, CSRF par en-tête, TOTP RFC 6238 maison (anti-rejeu, codes de secours), 2FA obligatoire OWNER/ADMIN, changement de mot de passe ; 175 tests | voir `git log` |
 | 2026-11-02 | **P0-05** — API Fastify : `buildApp` injectable, config validée, erreurs uniformes (404/400/413/415/422/500 sans fuite), en-têtes de sécurité, CORS fermé, request-id, journal d'accès sans IP, `/health`, `/ready` (vraie base), OpenAPI 3.1 hors prod, serveur Node avec arrêt propre + entrée serverless ; ADR-0022 (pas de bundle) ; 143 tests | voir `git log` |
@@ -53,7 +54,7 @@
   ou API publique ; le propriétaire peut demander d'« enchaîner » à tout moment.
 
 ## À valider par le propriétaire
-- Rien en attente.
+- **ADR-0023** : file de jobs maison sur PostgreSQL au lieu de pg-boss (à confirmer au checkpoint 0).
 
 ## Pièges et notes techniques
 - Le serveur MCP GitHub ne s'est pas connecté dans la session 1 ; `git push` fonctionne.
@@ -83,6 +84,8 @@
   `node src/main-http.ts` (ADR-0022). Après `eslint --fix`, toujours reformater : `pnpm fix`.
 - Auth : en-tête `x-dz-csrf: 1` obligatoire sur toute requête `/v1/*` mutante non-Bearer ;
   `.env` local doit contenir `APP_ENCRYPTION_KEYS` (commande dans `.env.example`).
+- Jobs : `publishEvent(tx, event, clock.now())` dans la transaction métier ; `jobs.enqueue(tx, …)`
+  pour un job direct ; handlers **idempotents** obligatoires (exécution au moins une fois).
 - Toute nouvelle route `/v1` doit déclarer `config: { access: … }` ; une route publique doit
   aussi être ajoutée à la liste de `http/access.test.ts` (décision consciente).
 - Premier OWNER : `pnpm --filter @dz/api create-owner --email … --name "…"` (mot de passe via

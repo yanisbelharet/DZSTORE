@@ -7,6 +7,12 @@ import type { Clock } from '@dz/core';
 import type { SecretBox } from '@dz/core/crypto';
 import type { Logger } from '@dz/core/logger';
 import type { DbClient } from '@dz/db';
+
+import { maintenanceJobs, maintenanceSchedules } from './jobs/builtin.ts';
+import { createJobEngine } from './jobs/engine.ts';
+import type { JobEngine } from './jobs/engine.ts';
+import { JobRegistry } from './jobs/registry.ts';
+import { jobsRoutes, tickRoutes } from './jobs/routes.ts';
 import { fastify, LogController } from 'fastify';
 import {
   jsonSchemaTransform,
@@ -37,6 +43,27 @@ export interface AppDependencies {
   /** Resolves when the database answers; used by `/ready` (default: `SELECT 1`). */
   checkDatabase?: () => Promise<void>;
   readyTimeoutMs?: number;
+  /** Job engine (default: built-in jobs and schedules). */
+  jobs?: JobEngine;
+}
+
+/** Default job engine of the application (shared by the HTTP process and the worker). */
+export function createDefaultJobEngine({
+  db,
+  clock,
+  logger,
+}: {
+  db: DbClient;
+  clock: Clock;
+  logger: Logger;
+}): JobEngine {
+  return createJobEngine({
+    db,
+    clock,
+    logger,
+    registry: new JobRegistry(maintenanceJobs),
+    schedules: maintenanceSchedules,
+  });
 }
 
 export const API_VERSION = '0.1.0';
@@ -52,6 +79,7 @@ export async function buildApp({
     await db.$queryRaw`SELECT 1`;
   },
   readyTimeoutMs = 2_000,
+  jobs = createDefaultJobEngine({ db, clock, logger }),
 }: AppDependencies) {
   const app = fastify({
     loggerInstance: logger,
@@ -106,6 +134,8 @@ export async function buildApp({
   await app.register(usersRoutes, { prefix: '/v1/users', deps: { db, clock } });
   await app.register(storesRoutes, { prefix: '/v1/stores', db });
   await app.register(auditRoutes, { prefix: '/v1/audit', db });
+  await app.register(jobsRoutes, { prefix: '/v1/jobs', db });
+  await app.register(tickRoutes, { prefix: '/v1/internal', jobs, tickSecret: config.tickSecret });
   await app.register(authRoutes, {
     prefix: '/v1/auth',
     deps: authDeps,

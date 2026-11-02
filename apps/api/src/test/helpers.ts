@@ -20,6 +20,7 @@ export function testConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
     docsEnabled: true,
     encryptionKeys: parseEncryptionKeys(`1:${randomBytes(32).toString('base64')}`),
     cookieSecure: true,
+    tickSecret: undefined,
     ...overrides,
   };
 }

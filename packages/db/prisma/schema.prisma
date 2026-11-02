@@ -55,6 +55,14 @@ enum OutboxStatus {
   FAILED
 }
 
+enum JobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  DEAD
+  CANCELLED
+}
+
 // ──────────────────────────── Plateforme ────────────────────────────
 
 model Store {
@@ -237,4 +245,40 @@ model OutboxEvent {
 
   @@index([status, availableAt])
   @@index([aggregateType, aggregateId])
+}
+
+/// File de jobs (ADR-0023). Consommée avec FOR UPDATE SKIP LOCKED.
+model Job {
+  id             BigInt    @id @default(autoincrement())
+  queue          String // nom du handler, ex. "maintenance.purge-sessions"
+  payload        Json // identifiants uniquement, jamais de données personnelles
+  status         JobStatus @default(PENDING)
+  priority       Int       @default(0) // plus grand = plus prioritaire
+  runAt          DateTime  @default(now()) @db.Timestamptz(3)
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(8)
+  /// Un seul job RUNNING par clé (ex. compte transporteur) — index unique partiel SQL.
+  concurrencyKey String?
+  /// Mise en file idempotente : unique par file.
+  dedupeKey      String?
+  lockedBy       String?
+  lockedUntil    DateTime? @db.Timestamptz(3)
+  lastError      String?
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+  finishedAt     DateTime? @db.Timestamptz(3)
+
+  @@unique([queue, dedupeKey])
+  @@index([status, runAt, priority])
+  @@index([status, lockedUntil])
+  @@index([concurrencyKey, status])
+}
+
+/// Tâches planifiées à intervalle fixe (maintenance, synchronisations).
+model ScheduledTask {
+  name            String    @id // = nom du job à mettre en file
+  intervalSeconds Int
+  nextRunAt       DateTime  @db.Timestamptz(3)
+  lastRunAt       DateTime? @db.Timestamptz(3)
+  enabled         Boolean   @default(true)
 }

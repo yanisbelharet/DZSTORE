@@ -38,8 +38,8 @@ flowchart LR
     ADMIN["apps/admin<br/>fichiers statiques"]
     STORE["apps/store<br/>Astro SSR + îlots Preact"]
     API["apps/api - http<br/>Fastify REST /v1"]
-    WORKER["apps/api - worker<br/>outbox, pg-boss, crons"]
-    PG[("PostgreSQL 17<br/>données + files pg-boss")]
+    WORKER["apps/api - worker<br/>outbox, file de jobs, tâches planifiées"]
+    PG[("PostgreSQL 17<br/>données + file de jobs")]
   end
 
   subgraph EXT["Services externes"]
@@ -175,7 +175,7 @@ sequenceDiagram
   A->>DB: TX Order NEW ou BLOCKED + items + OrderEvent + Outbox
   A-->>S: 201 numéro de commande, identique si rejouée
   S-->>C: Page merci, upsell, pixel navigateur si ON_SUBMIT
-  W->>DB: Relais outbox vers files pg-boss
+  W->>DB: Relais outbox vers la file de jobs
   W->>P: CAPI InitiateCheckout et Purchase si ON_SUBMIT
   AG->>A: Prend la suivante dans la file de confirmation
   AG->>A: Transition vers CONFIRMED
@@ -387,20 +387,23 @@ Règles :
 ### Outbox transactionnelle
 1. Le service métier écrit `OutboxEvent(type, aggregateId, payload=identifiants)` **dans la
    transaction** du changement d'état. Annulation de la transaction ⇒ pas d'événement.
-2. Le **relais** (worker, en boucle, un seul actif grâce à un verrou consultatif PostgreSQL) lit
-   `status = PENDING AND availableAt <= now()` par lots de 100 (`FOR UPDATE SKIP LOCKED`),
-   envoie un job pg-boss par handler abonné (`singletonKey = outbox:<id>:<handler>`), puis marque
-   `DISPATCHED`.
+2. Le **relais** (ADR-0023) prend un événement `PENDING` dû (`FOR UPDATE SKIP LOCKED`) et, dans
+   **une seule transaction**, crée un job par abonné (clé `outbox:<id>` unique par file) puis
+   marque l'événement `DISPATCHED` : diffusion **exactement une fois**, plusieurs relais
+   simultanés traitent des événements disjoints.
 3. En cas d'échec du relais : `attempts++`, `availableAt` repoussé (backoff) ; au-delà de 10
    essais ⇒ `FAILED` + alerte.
-4. Garantie : **au moins une fois** ⇒ tous les handlers sont **idempotents** (tableau ci-dessous).
-   Purge des `DISPATCHED` après 30 jours.
+4. Exécution des jobs : **au moins une fois** (un worker peut disparaître après l'effet et avant
+   l'acquittement ; le bail expiré rend le job à nouveau disponible) ⇒ tous les handlers sont
+   **idempotents** (tableau ci-dessous). Purge des `DISPATCHED` après 30 jours.
+5. Toutes les dates de la file (`runAt`, `availableAt`, bail) viennent de l'horloge de
+   l'application, jamais de l'horloge de la base : une seule source de temps.
 
 ### Deux modes d'exécution (ADR-0020)
 - **Boucle** (production) : le worker appelle `runTick()` en continu (relais outbox + jobs dus).
 - **Tick** (test sur Vercel) : `runTick({ budgetMs })` est appelé après la réponse HTTP qui a
-  produit des événements, et par `/v1/internal/tick` (secret, verrou consultatif : jamais deux
-  ticks simultanés). Les tâches planifiées (synchro des colis, rollups) sont rattrapées au tick
+  produit des événements, et par `/v1/internal/tick` (secret partagé ; des ticks simultanés
+  traitent des jobs disjoints). Les tâches planifiées (synchro des colis, rollups) sont rattrapées au tick
   suivant d'après leur échéance en base. Mêmes handlers et mêmes garanties dans les deux modes.
 
 ### Files
@@ -417,9 +420,9 @@ Règles :
 | `ai.generate` | action utilisateur | 2 | plafond mensuel vérifié avant appel |
 | `maintenance.*` | crons | 1 | purge sessions, clés d'idempotence, `StoreEvent` > 90 j, anonymisation > 12 mois, réconciliation ledger |
 
-La sérialisation « 1 job actif par compte transporteur » repose sur une politique de file
-singleton de pg-boss (≥ v10, à confirmer à l'installation en P0-08) ou, à défaut, sur un verrou
-consultatif PostgreSQL pris par le handler.
+La sérialisation « 1 job actif par compte transporteur » repose sur la **clé de concurrence** de
+la file (`concurrencyKey = carrier:<compteId>`), garantie par un index unique partiel
+(un seul job `RUNNING` par clé, ADR-0023).
 
 ### Idempotence
 
@@ -573,7 +576,7 @@ Dependabot), images Docker épinglées par digest, sauvegardes chiffrées et res
 |---|---|---|---|
 | Unitaire | Vitest | `domain`, `geo`, `carriers` (sérialisation, mapping), `tracking` (payloads, hachage), `core`, `blocks` | transitions exhaustives état × état × acteur ; chaque signal anti-fraude ; résolution des barèmes ; calcul des prix et paliers ; normalisation arabe/latine ; mapping de chaque statut EcoTrack, y compris inconnu et accentué |
 | Intégration API | Vitest + Fastify `inject` + **PostgreSQL réel** | routes, RBAC, transactions, contraintes | matrice routes × rôles ; double soumission ⇒ 1 commande ; deux agents sur la même commande ⇒ 1 seul verrou ; transition interdite ⇒ 409/403 ; contraintes SQL (`CHECK`, unicités) |
-| Jobs | Vitest + pg-boss réel + HTTP simulé (`undici` MockAgent) | outbox, retries, DLQ, transporteur | timeout après envoi ⇒ `UNKNOWN` ⇒ réconciliation ⇒ zéro doublon ; 429 + `Retry-After` ; token invalide ⇒ pause ; rejeu d'un job pixel ⇒ un seul envoi |
+| Jobs | Vitest + file de jobs réelle (PostgreSQL) + HTTP simulé (`undici` MockAgent) | outbox, retries, DLQ, transporteur | timeout après envoi ⇒ `UNKNOWN` ⇒ réconciliation ⇒ zéro doublon ; 429 + `Retry-After` ; token invalide ⇒ pause ; rejeu d'un job pixel ⇒ un seul envoi |
 | Contrat | fixtures issues des exemples du snapshot EcoTrack et des docs Meta/TikTok consignées | adaptateurs | chaque exemple officiel parsé sans erreur |
 | E2E | Playwright | parcours complets | store ar/fr mobile/desktop → commande → confirmation au clavier → envoi (transporteur factice) → synchro jusqu'à livrée → gain visible dans le dashboard agent |
 | Performance | Lighthouse CI | pages store | budgets PRD §7 bloquants en CI |

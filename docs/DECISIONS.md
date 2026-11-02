@@ -223,3 +223,26 @@
   Le point d'entrée serverless est compilé par la plateforme (Vercel) à partir des mêmes sources.
 - **Conséquences** : `erasableSyntaxOnly` reste obligatoire (pas d'`enum`, de `namespace` ni de
   propriétés de paramètres) ; le typecheck reste la barrière de typage ; esbuild retiré.
+
+## ADR-0023 — File de jobs maison sur PostgreSQL (remplace pg-boss dans ADR-0006)
+**Statut** : Acceptée (2026-11-02, P0-08) — à confirmer par le propriétaire au checkpoint 0.
+L'outbox transactionnelle d'ADR-0006 est conservée ; seul le moteur de file change.
+- **Contexte** : il faut des effets externes fiables (transporteur, CAPI, IA), un mode « tick »
+  serverless (ADR-0020), une sérialisation par compte transporteur et une file d'échecs
+  consultable dans l'admin. pg-boss (v12) apporte ces fonctions mais avec sa propre API, son
+  propre schéma et une diffusion outbox → file « au moins une fois ».
+- **Décision** : table `Job` (Prisma) consommée avec `FOR UPDATE SKIP LOCKED` :
+  - **diffusion exactement une fois** : le relais lit les événements outbox, crée un job par
+    abonné (clé `outbox:<id>` unique par file) et marque l'événement, dans **une seule
+    transaction** ;
+  - retries avec backoff exponentiel + jitter, erreurs non rejouables (`DEAD` immédiat),
+    « réessayer plus tard » (429 / `Retry-After`) sans consommer d'essai ;
+  - **clé de concurrence** (un seul job `RUNNING` par clé, garanti par un index unique partiel) ;
+  - **bail** (lease) : un job dont le worker a disparu redevient `PENDING` ;
+  - **tâches planifiées** (`ScheduledTask`, intervalle) déclenchées une seule fois même avec
+    plusieurs workers ;
+  - même moteur `runTick()` en boucle (worker) ou à la demande (tick serverless).
+- **Conséquences** : aucune dépendance de file ; tout est visible et administrable via Prisma ;
+  plusieurs ticks simultanés traitent des jobs disjoints (pas de verrou global nécessaire).
+  Le code de la file (~300 lignes) est à maintenir et couvert par des tests d'intégration.
+- **Écartée** : pg-boss (API et schéma tiers, diffusion au moins une fois, moins adapté au tick).

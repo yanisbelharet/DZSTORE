@@ -108,15 +108,15 @@
 
 ### P0-08 — Worker : jobs, outbox, retries, dead-letter
 - Moteur `runTick()` (ADR-0020) utilisé par le point d'entrée `worker` (boucle) et par
-  `/v1/internal/tick` (serverless, secret, verrou consultatif) ; pg-boss ; registre typé des jobs
+  `/v1/internal/tick` (serverless, secret) ; file de jobs PostgreSQL (ADR-0023) ; registre typé des jobs
   (payload Zod) ; relais outbox → files ; politique de retries (backoff exponentiel + jitter, erreurs non rejouables) ;
   dead-letter ; endpoints admin « jobs en échec » (liste, détail, relance) ; tâche planifiée
   d'exemple.
 - **Acceptation** : tests d'intégration — événement écrit dans une transaction annulée ⇒ aucun
   job ; transaction validée ⇒ job exécuté une fois ; handler en échec ⇒ retries puis DLQ ;
   relance depuis la DLQ ; crash simulé du relais ⇒ pas de perte (au moins une fois) et handler
-  idempotent ⇒ effet unique ; deux ticks simultanés ⇒ un seul s'exécute ; résultats identiques en
-  mode boucle et en mode tick.
+  idempotent ⇒ effet unique ; ticks simultanés ⇒ jobs disjoints (aucun traité deux fois) ;
+  résultats identiques en mode boucle et en mode tick.
 
 ### P0-09 — Admin : coquille
 - Vite + React + TanStack Router/Query, Tailwind v4 + shadcn/ui, i18n **fr/en** (clés typées),

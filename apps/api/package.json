@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "node --env-file-if-exists=../../.env --watch src/main-http.ts",
     "start": "node src/main-http.ts",
+    "worker:dev": "node --env-file-if-exists=../../.env --watch src/main-worker.ts",
+    "worker": "node src/main-worker.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "create-owner": "node --env-file-if-exists=../../.env src/cli/create-owner.ts"

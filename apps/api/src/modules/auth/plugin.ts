@@ -38,6 +38,7 @@ export function registerAuthentication<L extends FastifyBaseLogger, P extends Fa
       !SAFE_METHODS.has(request.method) &&
       bearer === undefined &&
       request.url.startsWith('/v1/') &&
+      !request.url.startsWith('/v1/internal/') && // machine endpoints carry their own secret
       request.headers[CSRF_HEADER] !== '1'
     ) {
       throw new AppError('CSRF_FAILED', 'Missing anti-CSRF header');

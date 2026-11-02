@@ -37,6 +37,7 @@ describe('contrôle d’accès déclaratif', () => {
       'HEAD /v1/openapi.json',
       'POST /v1/auth/login',
       'POST /v1/auth/logout',
+      'POST /v1/internal/tick',
     ]);
   });
 });

@@ -40,6 +40,8 @@ export const apiEnvSchema = baseEnvSchema.extend({
   APP_ENCRYPTION_KEYS: z.string().min(1, { error: 'required, see .env.example' }),
   /** Secure session cookie (`__Host-` prefix). Only `false` for plain-http local setups. */
   SESSION_COOKIE_SECURE: flag('true'),
+  /** Enables POST /v1/internal/tick (serverless job processing). Unset = endpoint disabled. */
+  TICK_SECRET: z.string().min(32, { error: 'at least 32 characters' }).optional(),
 });
 
 export interface ApiConfig {
@@ -55,6 +57,7 @@ export interface ApiConfig {
   docsEnabled: boolean;
   encryptionKeys: KeyRing;
   cookieSecure: boolean;
+  tickSecret: string | undefined;
 }
 
 export function loadApiConfig(source: EnvSource = process.env): ApiConfig {
@@ -71,5 +74,6 @@ export function loadApiConfig(source: EnvSource = process.env): ApiConfig {
     docsEnabled: env.NODE_ENV !== 'production',
     encryptionKeys: parseEncryptionKeys(env.APP_ENCRYPTION_KEYS),
     cookieSecure: env.SESSION_COOKIE_SECURE,
+    tickSecret: env.TICK_SECRET,
   };
 }
