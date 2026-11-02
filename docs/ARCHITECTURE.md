@@ -210,9 +210,10 @@ Points clés :
 
 ## 3. Modèle de données
 
-Le schéma Prisma complet (premier jet, **validé avec `prisma validate`, Prisma 6.19**) est en
-**annexe A** : 51 tables, 42 enums. À partir de P0-04, la source de vérité devient
-`packages/db/prisma/` et l'annexe sera remplacée par un lien.
+**Schéma réel (source de vérité)** : `packages/db/prisma/schema.prisma` et ses migrations
+(Prisma 7). Il contient les modèles déjà livrés ; chaque phase y ajoute les siens par migration.
+L'**annexe A** reste le **modèle cible** (51 tables, 42 enums, validé avec Prisma 6.19) qui guide
+les phases suivantes ; en cas d'écart, le schéma réel fait foi et l'annexe est mise à jour.
 
 ### Vue d'ensemble des entités centrales
 

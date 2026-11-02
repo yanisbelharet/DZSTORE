@@ -22,8 +22,11 @@ IA. Qualité production exigée.
 ## Commandes (à la racine, Node 24 obligatoire)
 `pnpm install` · `pnpm check` (format + lint + typecheck + tests + build : à lancer avant chaque
 commit) · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build` · `pnpm format` · `pnpm dev` ·
-`pnpm db:local` (PostgreSQL local + bases `dz_dev`/`dz_test`).
-À venir : `pnpm test:e2e`, `pnpm db:migrate`, `pnpm db:seed` (ajoutées ici quand elles existent).
+`pnpm db:local` (PostgreSQL local + bases `dz_dev`/`dz_test`) · `pnpm db:generate` (client Prisma) ·
+`pnpm db:migrate` (nouvelle migration en dev) · `pnpm db:deploy` (appliquer les migrations).
+À venir : `pnpm test:e2e`, `pnpm db:seed` (ajoutées ici quand elles existent).
+Migrations : toute contrainte non exprimable en Prisma est ajoutée en SQL dans la migration et
+listée dans ARCHITECTURE §3 ; jamais de modification d'une migration déjà poussée.
 
 ## Conventions de code
 - TypeScript strict, pas de `any` ni de `as` non justifié ; Zod à **chaque frontière** (HTTP,
