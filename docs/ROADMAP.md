@@ -155,7 +155,7 @@
 - **P1-02** Boutiques et domaines : administration (paramètres, langues, préfixe de numéro,
   thème de base).
 - **P1-03** Tarifs de livraison par boutique × wilaya × type (admin + API publique en cache).
-- **P1-04** Médias : URL présignées R2 (stockage local en dev), job de variantes AVIF/WebP.
+- **P1-04** Médias : interface `MediaStorage` (disque local, R2), job de variantes AVIF/WebP.
 - **P1-05** Produits et variantes : CRUD, SKU, coûts, statuts, SEO, duplication.
 - **P1-06** Offres par quantité, upsell et cross-sell (modèle + admin).
 - **Checkpoint 1** : catalogue complet administrable ; tests de normalisation géo ; médias servis
@@ -213,9 +213,13 @@
   aucun double Purchase en rejouant les jobs ; données hachées uniquement.
 
 ## Phase 6 — Mise en production MVP
-- **P6-01** Dockerfiles, configuration Railway et Cloudflare, guide pas à pas pour le propriétaire.
+- **P6-01** VPS Oracle Cloud Always Free (ARM64) : script de provisioning (pare-feu limité à
+  Cloudflare, SSH par clé, mises à jour de sécurité automatiques), Docker Compose de production,
+  Caddy, zones Cloudflare (cache, WAF), script de déploiement, guide pas à pas pour le
+  propriétaire.
 - **P6-02** Observabilité : suivi d'erreurs, alertes (DLQ, envois en erreur, quota transporteur).
-- **P6-03** Sauvegardes chiffrées vers R2 + test de restauration.
+- **P6-03** Sauvegardes chiffrées vers un stockage externe gratuit + test de restauration +
+  procédure de repli vers un autre VPS (exercée une fois).
 - **P6-04** Revue de sécurité complète (en-têtes, CSP, limites CDN/API, dépendances, secrets).
 - **P6-05** Tests de charge (création de commande, liste OMS, synchro) + correctifs.
 - **P6-06** Checklist de mise en ligne et runbook (incidents transporteur/pixels, rotation de clés).

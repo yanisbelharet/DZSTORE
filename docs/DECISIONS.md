@@ -61,7 +61,8 @@
 ## ADR-0006 — Jobs : pg-boss + outbox transactionnelle, sans Redis en v1
 **Statut** : Acceptée (2026-11-01)
 - **Contexte** : effets de bord externes (transporteur, CAPI, IA) qui doivent survivre aux pannes
-  et ne jamais être perdus ni dupliqués ; hébergement managé où chaque service coûte.
+  et ne jamais être perdus ni dupliqués ; un seul serveur gratuit aux ressources limitées
+  (ADR-0013).
 - **Décision** : table `OutboxEvent` écrite **dans la même transaction** que le changement métier ;
   un relais (worker) la transfère vers **pg-boss** (file sur PostgreSQL) ; consommateurs
   **idempotents** (clés d'unicité métier) ; retries avec backoff exponentiel + jitter ;
@@ -114,19 +115,39 @@
   correspondances par compte transporteur générées par rapprochement (exact → normalisé →
   approché) et **validées manuellement** si incertaines ; jamais d'envoi d'un nom non mappé.
 
-## ADR-0013 — Hébergement managé : Railway + Cloudflare
-**Statut** : Proposée (2026-11-01) — à valider par le propriétaire
-- **Contexte** : choix « services managés » ; processus permanents (worker) ; plusieurs
-  domaines de boutique ; utilisateurs en Algérie (Europe proche).
-- **Décision** : **Railway** (région Europe) pour `api-http`, `api-worker`, `store` et
-  PostgreSQL (réseau privé, latence ~1 ms entre services) ; **Cloudflare** pour DNS, CDN/WAF de
-  chaque domaine (cache HTML par hôte, règles de limitation), **R2** pour les médias et **Pages**
-  pour l'admin statique. Sauvegardes : celles de Railway + `pg_dump` chiffré quotidien vers R2.
-  Tout est conteneurisé (Dockerfile) pour rester portable.
-- **Conséquences** : deux fournisseurs au lieu de quatre ; coût prévisible.
-- **Écartées** : Vercel pour le store (cache multi-domaines plus délicat, worker hébergé ailleurs
-  de toute façon) ; Neon (latence réseau inter-fournisseurs à chaque requête ; reste une option
-  si la restauration à un instant donné devient prioritaire) ; Upstash (inutile sans Redis).
+## ADR-0013 — Hébergement gratuit : VPS Oracle Cloud « Always Free » + Cloudflare gratuit
+**Statut** : Acceptée (2026-11-02) — exigence du propriétaire : coût d'hébergement nul.
+Remplace la proposition initiale Railway + Cloudflare.
+- **Contexte** : processus permanents (worker : outbox, suivi des colis toutes les 20–60 min,
+  envois CAPI) et base PostgreSQL toujours active ; plusieurs domaines ; clients en Algérie.
+  Offres gratuites incompatibles : Vercel Hobby (usage commercial interdit, tâches planifiées
+  une fois par jour), Railway Free (mise en veille), Neon Free (veille après 5 min, 100 CU-h/mois
+  insuffisantes en activité continue), Cloudflare Workers Free (10 ms de CPU par requête).
+- **Décision** :
+  - Un **VPS ARM64 Oracle Cloud « Always Free »** (région d'origine **Marseille** ou **Paris**,
+    au plus près de l'Algérie) exécute tout via **Docker Compose** : PostgreSQL 17, `api-http`,
+    `api-worker`, `store` et **Caddy** (reverse proxy par hôte, TLS).
+  - **Cloudflare gratuit** devant chaque domaine (DNS, CDN, WAF, cache HTML par hôte) ;
+    **Cloudflare Pages** pour l'admin statique ; pare-feu du VPS n'acceptant HTTP(S) que depuis
+    les plages IP Cloudflare, SSH par clé uniquement.
+  - Médias derrière une interface de stockage : **R2** (10 Go gratuits) si activé, sinon disque
+    du VPS, servis via le CDN.
+  - Sauvegardes : `pg_dump` chiffré quotidien vers un stockage **externe** gratuit (R2 ou Google
+    Drive via rclone), rétention 30 jours, restauration testée.
+- **Conséquences** :
+  - Dépendances et images compatibles **linux/arm64** (Prisma, sharp, argon2 vérifiés en P0) ;
+    la CI construit les images arm64.
+  - Exploitation à notre charge mais **entièrement scriptée** (provisioning, mises à jour de
+    sécurité automatiques, déploiement, sauvegarde/restauration) avec guide pas à pas (P6).
+  - Pas de SLA ; quotas Always Free susceptibles d'évoluer (réduction signalée en 2026) ; risque
+    de récupération d'instances jugées inactives → compte passé en « Pay As You Go » (ressources
+    Always Free restant gratuites, à confirmer à l'inscription) + sonde de disponibilité externe
+    gratuite.
+  - **Repli sans changement de code** : tout autre VPS (Hostinger KVM, Hetzner…) avec le même
+    Docker Compose, restauration depuis la sauvegarde en moins d'une heure.
+  - Seul coût restant : le nom de domaine (~10 $/an).
+- **Écartées** : Railway Hobby (~5–10 $/mois), Hostinger VPS (~6–15 $/mois, gardé comme repli),
+  Vercel Pro + Neon (~25–40 $/mois), tout-Cloudflare payant : tous payants.
 
 ## ADR-0014 — Stratégie de tests
 **Statut** : Acceptée (2026-11-01)
@@ -147,10 +168,12 @@
   query strings des appels transporteur) ; identifiant de requête propagé aux jobs ; Sentry
   optionnel (sans données personnelles) ; endpoints `/health` et `/ready`.
 
-## ADR-0017 — Médias : R2 + variantes générées
-**Statut** : Acceptée (2026-11-01)
-- **Décision** : téléversement direct vers R2 par URL présignée ; job de génération AVIF + WebP
-  à largeurs fixes (sharp) ; `<picture>` avec `srcset`/`sizes` et dimensions explicites.
+## ADR-0017 — Médias : stockage abstrait + variantes générées
+**Statut** : Acceptée (2026-11-01, révisée 2026-11-02 avec ADR-0013)
+- **Décision** : interface `MediaStorage` avec deux implémentations (R2, disque local du VPS) ;
+  téléversement via l'API (taille et type contrôlés) ; job de génération AVIF + WebP à largeurs
+  fixes (sharp) ; fichiers immuables servis via le CDN avec cache long ; `<picture>` avec
+  `srcset`/`sizes` et dimensions explicites.
 
 ## ADR-0018 — Pixels : serveur comme source de vérité, déduplication par `event_id`
 **Statut** : Acceptée (2026-11-01)

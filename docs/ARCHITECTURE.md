@@ -28,13 +28,14 @@ flowchart LR
     MOB["App mobile Expo<br/>phase 12"]
   end
 
-  subgraph CF["Cloudflare"]
+  subgraph CF["Cloudflare - offre gratuite"]
     CDN["CDN + WAF<br/>cache HTML par hôte"]
     PAGES["Pages<br/>admin statique"]
-    R2[("R2<br/>médias AVIF/WebP")]
+    R2[("R2 si activé<br/>médias AVIF/WebP")]
   end
 
-  subgraph RW["Railway - réseau privé"]
+  subgraph RW["VPS Oracle Cloud Always Free - Docker Compose"]
+    CADDY["Caddy<br/>TLS + routage par hôte"]
     STORE["apps/store<br/>Astro SSR + îlots Preact"]
     API["apps/api - http<br/>Fastify REST /v1"]
     WORKER["apps/api - worker<br/>outbox, pg-boss, crons"]
@@ -48,15 +49,16 @@ flowchart LR
     AI["Fournisseurs IA"]
   end
 
-  CUST --> CDN --> STORE
-  STORE -- "jeton de service + IP client" --> API
+  CUST --> CDN --> CADDY
+  CADDY --> STORE
+  CADDY --> API
+  STORE -- "réseau Docker interne<br/>jeton de service + IP client" --> API
   AGENT --> PAGES
-  AGENT -- "cookie de session" --> API
-  MOB -. "Bearer" .-> API
+  AGENT -- "cookie de session" --> CDN
+  MOB -. "Bearer" .-> CDN
   API --> PG
   WORKER --> PG
-  API -- "URL présignées" --> R2
-  WORKER --> R2
+  WORKER -- "médias : R2 ou disque local" --> R2
   CDN --> R2
   WORKER --> ECO
   WORKER --> META
@@ -68,7 +70,7 @@ Principes :
 - **Le navigateur ne parle jamais aux services externes avec nos secrets.** Tous les appels
   transporteur, CAPI et IA partent du **worker**, déclenchés via l'outbox.
 - Le **store** n'a aucun accès direct à la base : il lit le catalogue et crée les commandes via
-  l'API, par le réseau privé, avec un jeton de service. Pour le navigateur, tout est de même
+  l'API, par le réseau Docker interne, avec un jeton de service. Pour le navigateur, tout est de même
   origine : le formulaire poste sur `/api/orders` du store, qui relaie à l'API.
 - L'**API** et le **worker** partagent le même code (services applicatifs) et ne diffèrent que par
   leur point d'entrée (ADR-0004).
@@ -106,16 +108,21 @@ Règles de dépendance (vérifiées par lint) :
 | `apps/store` | `contracts`, `blocks`, `geo`, `core` | `db`, `domain`, `apps/*` |
 | `apps/admin` | `contracts`, `blocks`, `core` (navigateur) | `db`, `apps/*` |
 
-### Hébergement (ADR-0013, à valider)
+### Hébergement gratuit (ADR-0013)
 
 | Composant | Où | Notes |
 |---|---|---|
-| `store` | Railway (service Node) | derrière Cloudflare, un domaine = une zone, cache HTML par hôte |
-| `api-http` | Railway | `api.<domaine principal>` via Cloudflare ; routes `/v1/public/*` exigeant le jeton de service |
-| `api-worker` | Railway | même image, commande différente ; pas d'exposition HTTP sauf santé |
-| PostgreSQL 17 | Railway | réseau privé ; sauvegardes Railway + `pg_dump` chiffré quotidien vers R2 |
+| Caddy | VPS Oracle Always Free (ARM64), conteneur | reverse proxy par hôte, TLS (certificat d'origine Cloudflare) ; seules les IP Cloudflare sont acceptées |
+| `store` | VPS, conteneur | derrière Cloudflare, un domaine = une zone gratuite, cache HTML par hôte |
+| `api-http` | VPS, conteneur | `api.<domaine principal>` via Cloudflare ; routes `/v1/public/*` exigeant le jeton de service |
+| `api-worker` | VPS, conteneur | même image, commande différente ; aucune exposition HTTP sauf santé interne |
+| PostgreSQL 17 | VPS, conteneur + volume persistant | jamais exposé ; `pg_dump` chiffré quotidien vers un stockage externe gratuit, rétention 30 j |
 | admin | Cloudflare Pages | statique, `admin.<domaine principal>` |
-| médias | Cloudflare R2 | `media.<domaine principal>`, variantes immuables, cache long |
+| médias | R2 (si activé) ou disque du VPS | `media.<domaine principal>` via le CDN, variantes immuables, cache long |
+| supervision | sonde externe gratuite | alerte si le site ou l'API ne répondent plus |
+
+Repli : n'importe quel VPS Linux (Hostinger KVM, Hetzner…) avec le même `docker-compose`
+et une restauration de sauvegarde ; aucun code ne dépend d'Oracle.
 
 ---
 
@@ -606,11 +613,12 @@ Dependabot), images Docker épinglées par digest, sauvegardes chiffrées et res
 | R10 | Concurrence (deux agents, synchro pendant une édition) | incohérences | verrou de commande avec TTL, verrou optimiste `version`, transitions centralisées |
 | R11 | Dérive du stock (transporteur vs ledger) | ruptures ou survente | ledger immuable, `StockLevel` transactionnel, réconciliation quotidienne, rapprochement `get/products/list` |
 | R12 | Fuite de jeton (le token EcoTrack est en query string pour `get/orders/status`) | compromission du compte transporteur | URL journalisées sans query string, rédaction pino, secrets chiffrés, rotation documentée |
-| R13 | Perte de données (base managée) | critique | sauvegardes Railway + `pg_dump` chiffré externe, restauration testée à chaque checkpoint majeur |
+| R13 | Perte de données (serveur gratuit sans SLA, disque unique) | critique | `pg_dump` chiffré quotidien vers un stockage externe, rétention 30 jours, restauration testée à chaque checkpoint majeur |
 | R14 | Dérive du projet entre sessions IA (contexte perdu) | qualité | `PROGRESS.md`, ADR, skills, tests comme filet, checkpoints avec revue |
 | R15 | IA produisant des contenus trompeurs ou coûteux | légal, réputation, coût | brouillons uniquement, consignes système, validation par schéma, plafond mensuel |
 | R16 | Fuseau horaire mal géré (stats, « aujourd'hui ») | chiffres faux | UTC en base, agrégation en `Africa/Algiers`, tests aux bornes de minuit |
-| R17 | Dépendance à Railway | migration coûteuse | conteneurs Docker standard, aucune API propriétaire dans le code |
+| R17 | Offre gratuite Oracle modifiée ou instance récupérée (quotas réduits, inactivité) | site hors ligne | compte « Pay As You Go », sonde externe, Docker Compose portable : repli vers un VPS payant en moins d'une heure depuis la sauvegarde |
+| R19 | Incompatibilité ARM64 d'une dépendance | blocage au déploiement | vérification arm64 en P0, CI construisant les images arm64 |
 | R18 | Évolution du découpage administratif (nouvelles wilayas) | formulaire et mapping obsolètes | référentiel en données, aucun code en dur, resynchro transporteur |
 
 ---

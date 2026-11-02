@@ -35,8 +35,9 @@
 - Doc EcoTrack officielle (Postman) figée en snapshot daté ; 🔶 à vérifier sur le compte réel.
 
 ## À valider par le propriétaire
-1. **ADR-0013 (hébergement)** : Railway + Cloudflare au lieu de Vercel + Neon + Upstash (moins de
-   fournisseurs, base dans le même réseau privé que l'API, cache multi-domaines plus simple).
+1. ~~ADR-0013 (hébergement)~~ — **tranché le 2026-11-02 : gratuit**, VPS Oracle Cloud
+   « Always Free » + Cloudflare gratuit, repli VPS payant. Action propriétaire avant P6 : créer
+   le compte Oracle (carte internationale, région Marseille ou Paris).
 2. **ADR-0002 (store en Astro)** et **ADR-0006 (files sur PostgreSQL, sans Redis)**.
 3. **Ordre de la roadmap** : mise en production après P6 ; stock, paie, statistiques complètes,
    builder et IA ensuite (paie et statistiques calculées rétroactivement depuis l'historique).
@@ -50,3 +51,5 @@
 - Conteneur cloud éphémère : tout doit être commité **et poussé** avant la fin d'une session.
 - Node 22 dans le conteneur de la session 1 (cible : Node 24 LTS, à installer en P0-01).
 - Docker non vérifié dans le conteneur : prévoir PostgreSQL natif en repli (P0-02).
+- Production en **ARM64** (Oracle Ampere) : vérifier dès P0-01 que Prisma, sharp et argon2
+  fournissent des binaires linux/arm64 ; la CI construira les images arm64.
