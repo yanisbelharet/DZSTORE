@@ -22,7 +22,8 @@
 9. P0-09 — Admin : coquille (fr/en, connexion + 2FA, utilisateurs, palette)
 10. P0-10 — Store : coquille (résolution par hôte, ar RTL / fr, budgets Lighthouse)
 11. P0-11 — Seed déterministe et fabriques de test
-12. Checkpoint 0 (`/checkpoint`, tag `cp-0`)
+12. P0-12 — Déploiement de test sur Vercel + Neon (prérequis : comptes créés par le propriétaire)
+13. Checkpoint 0 (`/checkpoint`, tag `cp-0`)
 
 ## Terminé
 | Date | Élément | Commit |
@@ -30,14 +31,15 @@
 | 2026-11-02 | Session 1 — kit reconstruit (CLAUDE.md, PRD, ROADMAP, DECISIONS, 11 skills, doc EcoTrack + snapshot officiel), ARCHITECTURE.md (schéma Prisma validé, diagrammes Mermaid vérifiés) | voir `git log` |
 
 ## Décisions de la session 1 (détail : PRD §26, DECISIONS.md)
-- Plusieurs boutiques (`storeId` partout) · services managés · admin fr + en · paie fixe par
-  commande livrée · pas de reprise de données · push après chaque commit sur la branche de travail.
+- Plusieurs boutiques (`storeId` partout) · hébergement : test gratuit sur Vercel + Neon, production
+  sur VPS avant toute vente · admin fr + en · paie fixe par commande livrée · pas de reprise de
+  données · push après chaque commit sur la branche de travail.
 - Doc EcoTrack officielle (Postman) figée en snapshot daté ; 🔶 à vérifier sur le compte réel.
 
 ## À valider par le propriétaire
-1. ~~ADR-0013 (hébergement)~~ — **tranché le 2026-11-02 : gratuit**, VPS Oracle Cloud
-   « Always Free » + Cloudflare gratuit, repli VPS payant. Action propriétaire avant P6 : créer
-   le compte Oracle (carte internationale, région Marseille ou Paris).
+1. ~~ADR-0013 (hébergement)~~ — **tranché le 2026-11-02** : test gratuit et non commercial sur
+   Vercel Hobby + Neon Free (P0-12) ; production sur un VPS choisi avant toute vente réelle (P6).
+   Actions propriétaire : créer les comptes Vercel et Neon avant P0-12.
 2. **ADR-0002 (store en Astro)** et **ADR-0006 (files sur PostgreSQL, sans Redis)**.
 3. **Ordre de la roadmap** : mise en production après P6 ; stock, paie, statistiques complètes,
    builder et IA ensuite (paie et statistiques calculées rétroactivement depuis l'historique).
@@ -51,5 +53,7 @@
 - Conteneur cloud éphémère : tout doit être commité **et poussé** avant la fin d'une session.
 - Node 22 dans le conteneur de la session 1 (cible : Node 24 LTS, à installer en P0-01).
 - Docker non vérifié dans le conteneur : prévoir PostgreSQL natif en repli (P0-02).
-- Production en **ARM64** (Oracle Ampere) : vérifier dès P0-01 que Prisma, sharp et argon2
-  fournissent des binaires linux/arm64 ; la CI construira les images arm64.
+- Production possiblement en **ARM64** (si Oracle) : vérifier dès P0-01 que Prisma, sharp et
+  argon2 fournissent des binaires linux/arm64 ; images construites pour amd64 et arm64.
+- Code portable test/production : adaptateur Astro, point d'entrée Fastify et mode des jobs
+  (boucle/tick, ADR-0020) choisis par configuration — jamais de logique spécifique à Vercel.

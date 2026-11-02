@@ -30,12 +30,12 @@ flowchart LR
 
   subgraph CF["Cloudflare - offre gratuite"]
     CDN["CDN + WAF<br/>cache HTML par hôte"]
-    PAGES["Pages<br/>admin statique"]
     R2[("R2 si activé<br/>médias AVIF/WebP")]
   end
 
-  subgraph RW["VPS Oracle Cloud Always Free - Docker Compose"]
+  subgraph RW["Production : VPS - Docker Compose"]
     CADDY["Caddy<br/>TLS + routage par hôte"]
+    ADMIN["apps/admin<br/>fichiers statiques"]
     STORE["apps/store<br/>Astro SSR + îlots Preact"]
     API["apps/api - http<br/>Fastify REST /v1"]
     WORKER["apps/api - worker<br/>outbox, pg-boss, crons"]
@@ -52,9 +52,9 @@ flowchart LR
   CUST --> CDN --> CADDY
   CADDY --> STORE
   CADDY --> API
+  CADDY --> ADMIN
   STORE -- "réseau Docker interne<br/>jeton de service + IP client" --> API
-  AGENT --> PAGES
-  AGENT -- "cookie de session" --> CDN
+  AGENT -- "admin + /api même origine<br/>cookie de session" --> CDN
   MOB -. "Bearer" .-> CDN
   API --> PG
   WORKER --> PG
@@ -70,7 +70,7 @@ Principes :
 - **Le navigateur ne parle jamais aux services externes avec nos secrets.** Tous les appels
   transporteur, CAPI et IA partent du **worker**, déclenchés via l'outbox.
 - Le **store** n'a aucun accès direct à la base : il lit le catalogue et crée les commandes via
-  l'API, par le réseau Docker interne, avec un jeton de service. Pour le navigateur, tout est de même
+  l'API, par le réseau interne (Docker en production, HTTPS en test), avec un jeton de service. Pour le navigateur, tout est de même
   origine : le formulaire poste sur `/api/orders` du store, qui relaie à l'API.
 - L'**API** et le **worker** partagent le même code (services applicatifs) et ne diffèrent que par
   leur point d'entrée (ADR-0004).
@@ -108,10 +108,39 @@ Règles de dépendance (vérifiées par lint) :
 | `apps/store` | `contracts`, `blocks`, `geo`, `core` | `db`, `domain`, `apps/*` |
 | `apps/admin` | `contracts`, `blocks`, `core` (navigateur) | `db`, `apps/*` |
 
-### Hébergement gratuit (ADR-0013)
+### Hébergement (ADR-0013)
+
+Le diagramme ci-dessus décrit la **production** (VPS, fournisseur choisi avant P6). Au début,
+un **environnement de test gratuit et non commercial** tourne sur Vercel.
+
+**Test — Vercel Hobby + Neon Free (aucune vente réelle, aucune dépense publicitaire)**
 
 | Composant | Où | Notes |
 |---|---|---|
+| `store` | projet Vercel (adaptateur Astro Vercel) | domaine `*.vercel.app` ; seconde boutique de démo sélectionnable par paramètre, autorisé **uniquement** hors production |
+| `admin` | projet Vercel (statique) | `/api/*` réécrit vers le projet API (ADR-0021) |
+| `api` | projet Vercel (fonction Fastify) | jobs en mode tick (ADR-0020) : traitement après réponse + `/v1/internal/tick` |
+| PostgreSQL | Neon Free | veille automatique ; migrations appliquées au déploiement de test |
+| médias | stockage objet gratuit via `MediaStorage` | — |
+| transporteur | faux transporteur | EcoTrack réel seulement pour des essais ponctuels validés |
+
+**Production — VPS + Cloudflare gratuit**
+
+| Composant | Où | Notes |
+|---|---|---|
+| Caddy | VPS, conteneur | reverse proxy par hôte, TLS (certificat d'origine Cloudflare) ; seules les IP Cloudflare sont acceptées |
+| `store` | VPS, conteneur | derrière Cloudflare, un domaine = une zone gratuite, cache HTML par hôte |
+| `admin` | VPS, fichiers statiques servis par Caddy | `admin.<domaine principal>`, `/api` routé vers l'API (même origine) |
+| `api-http` | VPS, conteneur | routes `/v1/public/*` exigeant le jeton de service |
+| `api-worker` | VPS, conteneur | même image, commande différente, mode boucle ; aucune exposition HTTP sauf santé interne |
+| PostgreSQL 17 | VPS, conteneur + volume persistant | jamais exposé ; `pg_dump` chiffré quotidien vers un stockage externe, rétention 30 j |
+| médias | R2 (si activé) ou disque du VPS | `media.<domaine principal>` via le CDN, variantes immuables, cache long |
+| supervision | sonde externe gratuite | alerte si le site ou l'API ne répondent plus |
+
+Fournisseurs candidats : Oracle Cloud « Always Free » (gratuit, ARM64), Hostinger VPS, Hetzner.
+Images construites pour `linux/amd64` et `linux/arm64` ; aucun code ne dépend d'un fournisseur.
+
+---|---|---|
 | Caddy | VPS Oracle Always Free (ARM64), conteneur | reverse proxy par hôte, TLS (certificat d'origine Cloudflare) ; seules les IP Cloudflare sont acceptées |
 | `store` | VPS, conteneur | derrière Cloudflare, un domaine = une zone gratuite, cache HTML par hôte |
 | `api-http` | VPS, conteneur | `api.<domaine principal>` via Cloudflare ; routes `/v1/public/*` exigeant le jeton de service |
@@ -366,6 +395,13 @@ Règles :
 4. Garantie : **au moins une fois** ⇒ tous les handlers sont **idempotents** (tableau ci-dessous).
    Purge des `DISPATCHED` après 30 jours.
 
+### Deux modes d'exécution (ADR-0020)
+- **Boucle** (production) : le worker appelle `runTick()` en continu (relais outbox + jobs dus).
+- **Tick** (test sur Vercel) : `runTick({ budgetMs })` est appelé après la réponse HTTP qui a
+  produit des événements, et par `/v1/internal/tick` (secret, verrou consultatif : jamais deux
+  ticks simultanés). Les tâches planifiées (synchro des colis, rollups) sont rattrapées au tick
+  suivant d'après leur échéance en base. Mêmes handlers et mêmes garanties dans les deux modes.
+
 ### Files
 
 | File | Source | Concurrence | Notes |
@@ -511,8 +547,8 @@ consultatif PostgreSQL pris par le handler.
   `unsafe-eval`.
 - **CSP admin** : `default-src 'self'`, `connect-src` = API, `frame-src` = domaines des boutiques
   (aperçu), `frame-ancestors 'none'`.
-- CSRF : cookie `SameSite=Lax` + en-tête personnalisé obligatoire sur toute mutation + CORS
-  restreint à l'origine admin.
+- CSRF : admin et API sur la même origine (ADR-0021), cookie `SameSite=Lax` + en-tête
+  personnalisé obligatoire sur toute mutation ; CORS fermé (aucune origine tierce autorisée).
 - Exports CSV : neutralisation des cellules commençant par `= + - @` (injection de formules).
 
 ### Audit
@@ -617,7 +653,8 @@ Dependabot), images Docker épinglées par digest, sauvegardes chiffrées et res
 | R14 | Dérive du projet entre sessions IA (contexte perdu) | qualité | `PROGRESS.md`, ADR, skills, tests comme filet, checkpoints avec revue |
 | R15 | IA produisant des contenus trompeurs ou coûteux | légal, réputation, coût | brouillons uniquement, consignes système, validation par schéma, plafond mensuel |
 | R16 | Fuseau horaire mal géré (stats, « aujourd'hui ») | chiffres faux | UTC en base, agrégation en `Africa/Algiers`, tests aux bornes de minuit |
-| R17 | Offre gratuite Oracle modifiée ou instance récupérée (quotas réduits, inactivité) | site hors ligne | compte « Pay As You Go », sonde externe, Docker Compose portable : repli vers un VPS payant en moins d'une heure depuis la sauvegarde |
+| R17 | Offre gratuite modifiée ou retirée (Vercel Hobby, Neon Free, Oracle Always Free) ou instance récupérée | environnement hors ligne | code portable (adaptateurs par configuration), Docker Compose, sonde externe, sauvegardes : bascule vers une autre cible sans réécriture |
+| R20 | Test sur Vercel utilisé pour de vraies ventes (interdit par les conditions Hobby) | compte suspendu | règle ADR-0013 : production sur VPS avant toute vente réelle, rappel dans la checklist de mise en ligne (P6) |
 | R19 | Incompatibilité ARM64 d'une dépendance | blocage au déploiement | vérification arm64 en P0, CI construisant les images arm64 |
 | R18 | Évolution du découpage administratif (nouvelles wilayas) | formulaire et mapping obsolètes | référentiel en données, aucun code en dur, resynchro transporteur |
 

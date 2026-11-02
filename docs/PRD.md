@@ -397,7 +397,7 @@ transporteurs autres qu'EcoTrack.
 | # | Question | Décision |
 |---|---|---|
 | Q1 | Une ou plusieurs boutiques ? | **Plusieurs**, `storeId` partout dès le départ |
-| Q2 | Hébergement | **Gratuit exigé** : VPS Oracle Cloud « Always Free » + Cloudflare gratuit ; repli sur un VPS payant sans changement de code (ADR-0013) |
+| Q2 | Hébergement | **Gratuit au début** : test non commercial sur Vercel Hobby + Neon Free ; production sur un VPS (Oracle Always Free gratuit ou VPS payant) choisi avant toute vente réelle (ADR-0013) |
 | Q3 | Accès EcoTrack | Doc officielle Postman + token disponibles (token jamais commité) |
 | Q4 | Push git | Push sur la branche de travail après chaque commit ; jamais `main`, jamais de force-push |
 | Q5 | Langue de l'admin | **Français + anglais** (i18n complet) |
@@ -427,6 +427,7 @@ transporteurs autres qu'EcoTrack.
 - Mode « stock chez le transporteur » : quels produits, quelle société ?
 - Domaines définitifs des boutiques et de l'admin (seul coût d'infrastructure : ~10 $/an par
   domaine).
-- Compte Oracle Cloud : inscription avec une carte bancaire internationale (vérification, pas de
-  débit), région d'origine Marseille ou Paris — à créer avant P6.
+- Comptes Vercel (Hobby) et Neon (Free) à créer avant P0-12 (gratuits, sans carte bancaire).
+- Fournisseur du VPS de production à choisir avant P6 (Oracle Always Free exige une carte
+  bancaire internationale à l'inscription).
 - Charte graphique (logo, couleurs) de la première boutique.

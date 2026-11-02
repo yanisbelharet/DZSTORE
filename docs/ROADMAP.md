@@ -80,10 +80,13 @@
 
 ### P0-05 — API HTTP : squelette
 - Fastify 5 + type provider Zod ; préfixe `/v1` ; format d'erreur uniforme ; OpenAPI générée
-  (UI de doc hors production) ; en-têtes de sécurité ; CORS par liste d'origines ; limite de
-  taille de requête ; `/health` et `/ready` (DB) ; arrêt gracieux.
+  (UI de doc hors production) ; en-têtes de sécurité ; CORS fermé par défaut (admin sur la même
+  origine, ADR-0021) ; limite de taille de requête ; `/health` et `/ready` (DB) ; arrêt gracieux.
+- Deux points d'entrée : serveur Node (production) et fonction serverless (test Vercel), même
+  application.
 - **Acceptation** : tests `inject` (404 et 422 au bon format, en-têtes présents, CORS refusé pour
-  une origine inconnue, `/ready` en échec si DB coupée) ; OpenAPI valide.
+  une origine inconnue, `/ready` en échec si DB coupée) ; OpenAPI valide ; l'application démarre
+  dans les deux modes (serveur et handler serverless).
 
 ### P0-06 — Authentification
 - Connexion e-mail + mot de passe (Argon2id), sessions opaques hachées (cookie admin, Bearer
@@ -104,14 +107,16 @@
   un agent ne voit jamais une boutique non attribuée ; actions sensibles présentes dans l'audit.
 
 ### P0-08 — Worker : jobs, outbox, retries, dead-letter
-- Point d'entrée `worker` ; pg-boss ; registre typé des jobs (payload Zod) ; relais outbox →
-  files ; politique de retries (backoff exponentiel + jitter, erreurs non rejouables) ;
+- Moteur `runTick()` (ADR-0020) utilisé par le point d'entrée `worker` (boucle) et par
+  `/v1/internal/tick` (serverless, secret, verrou consultatif) ; pg-boss ; registre typé des jobs
+  (payload Zod) ; relais outbox → files ; politique de retries (backoff exponentiel + jitter, erreurs non rejouables) ;
   dead-letter ; endpoints admin « jobs en échec » (liste, détail, relance) ; tâche planifiée
   d'exemple.
 - **Acceptation** : tests d'intégration — événement écrit dans une transaction annulée ⇒ aucun
   job ; transaction validée ⇒ job exécuté une fois ; handler en échec ⇒ retries puis DLQ ;
   relance depuis la DLQ ; crash simulé du relais ⇒ pas de perte (au moins une fois) et handler
-  idempotent ⇒ effet unique.
+  idempotent ⇒ effet unique ; deux ticks simultanés ⇒ un seul s'exécute ; résultats identiques en
+  mode boucle et en mode tick.
 
 ### P0-09 — Admin : coquille
 - Vite + React + TanStack Router/Query, Tailwind v4 + shadcn/ui, i18n **fr/en** (clés typées),
@@ -122,7 +127,7 @@
   refus d'accès d'un agent à la gestion des utilisateurs) ; captures mobile/desktop vérifiées.
 
 ### P0-10 — Store : coquille
-- Astro SSR (adaptateur Node) + Preact ; résolution de la boutique par **nom d'hôte** (cache
+- Astro SSR (adaptateur Node en production, Vercel en test, choisi par configuration) + Preact ; résolution de la boutique par **nom d'hôte** (cache
   court) ; routage `ar` (défaut, RTL) / `fr` ; mise en page et tokens de thème depuis la
   boutique ; polices auto-hébergées ; en-têtes de sécurité/CSP ; en-têtes de cache CDN par hôte ;
   pages 404 et santé.
@@ -139,11 +144,25 @@
 - **Acceptation** : seed idempotent (deux exécutions ⇒ même état) ; refus d'exécution si
   `NODE_ENV=production` ; identifiants de démo documentés dans le README.
 
+### P0-12 — Déploiement de test sur Vercel + Neon (gratuit, non commercial)
+- Trois projets Vercel (store, admin, api) déployés à chaque push de la branche de travail ;
+  base Neon Free ; migrations appliquées au déploiement ; seed de démonstration à la demande ;
+  réécriture `/api` de l'admin vers l'API (ADR-0021) ; tick déclenchable depuis l'admin et par
+  un cron externe gratuit (≥ 30 min).
+- Guide pas à pas pour le propriétaire (création des comptes Vercel et Neon, import du dépôt,
+  variables d'environnement) ; aucun secret dans le dépôt.
+- **Prérequis propriétaire** : comptes Vercel (Hobby) et Neon (Free) créés et reliés au dépôt
+  GitHub.
+- **Acceptation** : URL de test accessible sur mobile ; connexion à l'admin seedé ; deux
+  boutiques de démo affichées ; un événement outbox traité par un tick ; mention « environnement
+  de test » visible dans l'admin et le store.
+
 ### Checkpoint 0 (`cp-0`)
 - `pnpm install && pnpm lint && pnpm typecheck && pnpm test && pnpm build` verts ; CI verte.
 - `pnpm dev` lance API, worker, admin et store ; connexion OWNER avec 2FA depuis l'admin seedé.
 - Matrice RBAC testée ; démonstration outbox → job → retries → DLQ → relance.
 - Deux boutiques servies par hôte, en ar RTL et fr ; budget Lighthouse respecté.
+- Environnement de test Vercel + Neon fonctionnel (URL partagée au propriétaire).
 - Aucun secret dans le dépôt ; logs vérifiés sans données personnelles.
 - `PROGRESS.md`, `CLAUDE.md` (commandes réelles) et `ARCHITECTURE.md` à jour.
 
@@ -213,10 +232,11 @@
   aucun double Purchase en rejouant les jobs ; données hachées uniquement.
 
 ## Phase 6 — Mise en production MVP
-- **P6-01** VPS Oracle Cloud Always Free (ARM64) : script de provisioning (pare-feu limité à
-  Cloudflare, SSH par clé, mises à jour de sécurité automatiques), Docker Compose de production,
-  Caddy, zones Cloudflare (cache, WAF), script de déploiement, guide pas à pas pour le
-  propriétaire.
+- **P6-01** VPS de production (fournisseur choisi par le propriétaire : Oracle Always Free,
+  Hostinger, Hetzner…) : script de provisioning (pare-feu limité à Cloudflare, SSH par clé, mises
+  à jour de sécurité automatiques), Docker Compose de production (images amd64/arm64), Caddy,
+  zones Cloudflare (cache, WAF), script de déploiement, migration des données de test si
+  souhaitée, guide pas à pas. **Aucune vente réelle avant cette étape.**
 - **P6-02** Observabilité : suivi d'erreurs, alertes (DLQ, envois en erreur, quota transporteur).
 - **P6-03** Sauvegardes chiffrées vers un stockage externe gratuit + test de restauration +
   procédure de repli vers un autre VPS (exercée une fois).

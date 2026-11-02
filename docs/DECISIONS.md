@@ -115,39 +115,40 @@
   correspondances par compte transporteur générées par rapprochement (exact → normalisé →
   approché) et **validées manuellement** si incertaines ; jamais d'envoi d'un nom non mappé.
 
-## ADR-0013 — Hébergement gratuit : VPS Oracle Cloud « Always Free » + Cloudflare gratuit
-**Statut** : Acceptée (2026-11-02) — exigence du propriétaire : coût d'hébergement nul.
-Remplace la proposition initiale Railway + Cloudflare.
-- **Contexte** : processus permanents (worker : outbox, suivi des colis toutes les 20–60 min,
-  envois CAPI) et base PostgreSQL toujours active ; plusieurs domaines ; clients en Algérie.
-  Offres gratuites incompatibles : Vercel Hobby (usage commercial interdit, tâches planifiées
-  une fois par jour), Railway Free (mise en veille), Neon Free (veille après 5 min, 100 CU-h/mois
-  insuffisantes en activité continue), Cloudflare Workers Free (10 ms de CPU par requête).
-- **Décision** :
-  - Un **VPS ARM64 Oracle Cloud « Always Free »** (région d'origine **Marseille** ou **Paris**,
-    au plus près de l'Algérie) exécute tout via **Docker Compose** : PostgreSQL 17, `api-http`,
-    `api-worker`, `store` et **Caddy** (reverse proxy par hôte, TLS).
-  - **Cloudflare gratuit** devant chaque domaine (DNS, CDN, WAF, cache HTML par hôte) ;
-    **Cloudflare Pages** pour l'admin statique ; pare-feu du VPS n'acceptant HTTP(S) que depuis
-    les plages IP Cloudflare, SSH par clé uniquement.
-  - Médias derrière une interface de stockage : **R2** (10 Go gratuits) si activé, sinon disque
-    du VPS, servis via le CDN.
-  - Sauvegardes : `pg_dump` chiffré quotidien vers un stockage **externe** gratuit (R2 ou Google
-    Drive via rclone), rétention 30 jours, restauration testée.
+## ADR-0013 — Hébergement : test gratuit sur Vercel, production sur VPS (à choisir avant P6)
+**Statut** : Acceptée (2026-11-02). Remplace les versions « Railway » puis « Oracle seul ».
+- **Contexte** : le propriétaire veut un coût nul ; au début, l'usage est **non commercial**
+  (tests, démonstrations, aucun vrai client ni dépense publicitaire). Le système a besoin d'un
+  worker et d'une base PostgreSQL ; Vercel n'exécute pas de processus permanent et son offre
+  gratuite (Hobby) interdit l'usage commercial et limite les tâches planifiées à une par jour.
+- **Décision — environnement de TEST (gratuit, non commercial)** :
+  - **Vercel Hobby** : trois projets depuis ce dépôt — `store` (Astro, adaptateur Vercel),
+    `admin` (statique), `api` (Fastify en fonction serverless). Un déploiement par push, URL de
+    test consultable sur téléphone.
+  - **Neon Free** pour PostgreSQL (veille automatique acceptable en test).
+  - Jobs en **mode tick** (ADR-0020) : traitement après réponse et endpoint `/v1/internal/tick`
+    protégé par secret, appelé à la demande (bouton admin) ou par un cron externe gratuit à faible
+    fréquence (≥ 30 min, pour laisser la base se mettre en veille).
+  - Médias : interface `MediaStorage` (ADR-0017) avec stockage objet gratuit.
+  - Transporteur : **faux transporteur** par défaut ; compte EcoTrack réel uniquement pour des
+    tests ponctuels en lecture seule ou des colis de test explicitement validés.
+- **Décision — PRODUCTION (avant toute vente réelle, au plus tard en P6)** :
+  - Cible : **VPS** avec Docker Compose (PostgreSQL, `api-http`, `api-worker` en mode boucle,
+    `store`, Caddy), Cloudflare gratuit devant (DNS, CDN, WAF).
+  - Candidats : Oracle Cloud « Always Free » (gratuit, ARM64, carte internationale requise,
+    sans SLA), Hostinger VPS (~6–15 $/mois), Hetzner ; choix du propriétaire avant P6.
+  - Sauvegardes : `pg_dump` chiffré quotidien vers un stockage externe, restauration testée.
 - **Conséquences** :
-  - Dépendances et images compatibles **linux/arm64** (Prisma, sharp, argon2 vérifiés en P0) ;
-    la CI construit les images arm64.
-  - Exploitation à notre charge mais **entièrement scriptée** (provisioning, mises à jour de
-    sécurité automatiques, déploiement, sauvegarde/restauration) avec guide pas à pas (P6).
-  - Pas de SLA ; quotas Always Free susceptibles d'évoluer (réduction signalée en 2026) ; risque
-    de récupération d'instances jugées inactives → compte passé en « Pay As You Go » (ressources
-    Always Free restant gratuites, à confirmer à l'inscription) + sonde de disponibilité externe
-    gratuite.
-  - **Repli sans changement de code** : tout autre VPS (Hostinger KVM, Hetzner…) avec le même
-    Docker Compose, restauration depuis la sauvegarde en moins d'une heure.
-  - Seul coût restant : le nom de domaine (~10 $/an).
-- **Écartées** : Railway Hobby (~5–10 $/mois), Hostinger VPS (~6–15 $/mois, gardé comme repli),
-  Vercel Pro + Neon (~25–40 $/mois), tout-Cloudflare payant : tous payants.
+  - Le code reste **portable** : adaptateurs Astro (Vercel/Node) et point d'entrée Fastify
+    (serverless/serveur) choisis par configuration ; aucune API propriétaire Vercel dans la
+    logique métier.
+  - Images et dépendances compatibles **linux/amd64 et linux/arm64** (Oracle).
+  - Bascule test → production = nouvelle cible de déploiement + migration de base, sans
+    réécriture.
+  - **Règle** : dès qu'il y a de vrais clients, des commandes réelles ou des dépenses
+    publicitaires, l'environnement Vercel Hobby ne sert plus que de préproduction.
+- **Écartées** : Railway Free (veille), Vercel Hobby en production (interdit pour un usage
+  commercial), Vercel Pro + Neon (~25–40 $/mois), tout-Cloudflare (réécriture d'API et de jobs).
 
 ## ADR-0014 — Stratégie de tests
 **Statut** : Acceptée (2026-11-01)
@@ -187,3 +188,25 @@ Remplace la proposition initiale Railway + Cloudflare.
 - **Décision** : les mouvements de stock et les gains agents ne sont **jamais modifiés ni
   supprimés** ; corrections par écritures inverses ; soldes dérivés (table `StockLevel` maintenue
   dans la même transaction + réconciliation périodique avec la somme du ledger).
+
+## ADR-0020 — Exécution des jobs en double mode : boucle (VPS) et tick (serverless)
+**Statut** : Acceptée (2026-11-02)
+- **Contexte** : en test, l'API tourne sur Vercel (pas de processus permanent) ; en production,
+  un worker permanent tourne sur le VPS (ADR-0013).
+- **Décision** : le moteur de jobs expose une fonction `runTick({ budgetMs, maxJobs })` qui
+  relaie l'outbox, récupère les jobs dus (pg-boss en récupération explicite), les exécute dans le
+  budget de temps puis rend la main. Le worker de production l'appelle **en boucle** ; en
+  serverless, elle est appelée après la réponse HTTP (traitement différé) et par l'endpoint
+  `/v1/internal/tick` (secret, comparaison à temps constant, idempotent, non concurrent grâce à
+  un verrou consultatif PostgreSQL).
+- **Conséquences** : mêmes handlers, mêmes garanties (idempotence, retries, DLQ) dans les deux
+  modes ; en test, les délais de traitement dépendent de la fréquence des ticks (documenté).
+
+## ADR-0021 — Admin et API sur la même origine
+**Statut** : Acceptée (2026-11-02)
+- **Contexte** : sur `*.vercel.app` (liste publique des suffixes), l'admin et l'API sont des
+  sites différents : un cookie `SameSite=Lax` ne serait pas envoyé. Même logique utile en
+  production (CSRF, CORS).
+- **Décision** : l'admin appelle toujours l'API via **`/api` sur sa propre origine** — réécriture
+  Vercel en test, routage Caddy en production. Cookie de session de premier niveau, CORS fermé
+  pour l'admin, CSRF limité par `SameSite` + en-tête personnalisé obligatoire.
