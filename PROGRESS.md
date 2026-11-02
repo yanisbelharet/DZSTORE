@@ -4,16 +4,16 @@
 > chaque tâche (`/tache`) et de chaque session (`/fin-session`).
 
 ## État actuel
-- **Phase** : 0 — Fondations (en cours : 2/12 tâches).
+- **Phase** : 0 — Fondations (en cours : 3/12 tâches).
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : `/tache P0-03` (package `core`) — plan à soumettre.
+- **Prochaine action** : `/tache P0-04` (package `db` : Prisma 7 + schéma socle) — plan à soumettre.
 
 ## File d'attente — Phase 0 (détails et critères : `docs/ROADMAP.md`)
 1. ~~P0-01 — Monorepo et outillage qualité~~ ✅
 2. ~~P0-02 — Environnement local et intégration continue~~ ✅
-3. P0-03 — Package `core` (env, logger avec rédaction, erreurs, ids, crypto, argent, temps)
+3. ~~P0-03 — Package `core` (env, logger avec rédaction, erreurs, ids, crypto, argent, temps)~~ ✅
 4. P0-04 — Package `db` : Prisma et schéma socle
 5. P0-05 — API HTTP : squelette Fastify
 6. P0-06 — Authentification (sessions, Argon2id, TOTP, limitation de débit)
@@ -28,6 +28,7 @@
 ## Terminé
 | Date | Élément | Commit |
 |---|---|---|
+| 2026-11-02 | **P0-03** — `@dz/core` : modules purs (`errors`, `money`, `time`, `ids`) et serveur (`env`, `logger` avec rédaction PII/secrets, `crypto` AES-256-GCM + rotation) ; frontières lint étendues ; 97 tests | `12afa1a` |
 | 2026-11-02 | **P0-02** — CI GitHub Actions (format, lint, typecheck, tests, build, service PostgreSQL 17, actions épinglées par SHA) ; `pnpm db:local` (Docker ou PostgreSQL natif, bases `dz_dev`/`dz_test`, idempotent) ; **CI run n°1 verte en 52 s** (37 tests exécutés, PostgreSQL 17.11) | `a15d448` |
 | 2026-11-02 | **P0-01** — monorepo pnpm + Turborepo, TypeScript 6 strict, ESLint 10 typé + frontières entre packages (24 tests), Prettier, squelettes des 7 packages/apps, Node 24 imposé ; `pnpm check` vert, clone neuf vérifié | `39bd432` |
 | 2026-11-02 | Session 1 — kit reconstruit (CLAUDE.md, PRD, ROADMAP, DECISIONS, 11 skills, doc EcoTrack + snapshot officiel), ARCHITECTURE.md (schéma Prisma validé, diagrammes Mermaid vérifiés) | voir `git log` |
@@ -64,6 +65,12 @@
   binaires externes téléchargés (ex. actionlint) sont bloqués par les garde-fous de la session.
 - TypeScript 7 publié mais non supporté par typescript-eslint (< 6.1) → TypeScript 6.0.x.
 - Argon2 : `@node-rs/argon2` (binaires précompilés, dont linux-arm64, sans node-gyp).
+- Prisma : le dist-tag `latest` pointe vers une **8.0 rc** ; utiliser la **7.10.x stable**. Prisma 7 :
+  générateur `prisma-client` (sortie obligatoire), URL dans `prisma.config.ts`, adaptateur
+  `@prisma/adapter-pg` obligatoire, plus de moteur Rust (ARM64 sans souci), `.env` non chargé
+  automatiquement, `migrate dev` ne lance plus `generate` ni le seed.
+- Logs : un nom écrit en texte libre dans un message n'est pas détectable — ne jamais mettre de
+  donnée personnelle dans un message ; les passer en champs (masqués par clé).
 - Production possiblement en **ARM64** (si Oracle) : vérifier dès P0-01 que Prisma, sharp et
   argon2 fournissent des binaires linux/arm64 ; images construites pour amd64 et arm64.
 - Code portable test/production : adaptateur Astro, point d'entrée Fastify et mode des jobs
