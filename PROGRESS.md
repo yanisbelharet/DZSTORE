@@ -4,18 +4,20 @@
 > chaque tâche (`/tache`) et de chaque session (`/fin-session`).
 
 ## État actuel
-- **Phase** : 0 — Fondations (en cours : 4/12 tâches).
+- **Phase** : 0 — Fondations (en cours : 5/12 tâches).
+- **Mode** : enchaînement autonome de la Phase 0 sans validation des plans (accord du propriétaire
+  le 2026-11-02) ; arrêt uniquement sur blocage ou décision qui lui revient.
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : `/tache P0-05` (API HTTP : squelette Fastify) — plan à soumettre.
+- **Prochaine action** : `/tache P0-06` (authentification).
 
 ## File d'attente — Phase 0 (détails et critères : `docs/ROADMAP.md`)
 1. ~~P0-01 — Monorepo et outillage qualité~~ ✅
 2. ~~P0-02 — Environnement local et intégration continue~~ ✅
 3. ~~P0-03 — Package `core` (env, logger avec rédaction, erreurs, ids, crypto, argent, temps)~~ ✅
 4. ~~P0-04 — Package `db` : Prisma et schéma socle~~ ✅
-5. P0-05 — API HTTP : squelette Fastify
+5. ~~P0-05 — API HTTP : squelette Fastify~~ ✅
 6. P0-06 — Authentification (sessions, Argon2id, TOTP, limitation de débit)
 7. P0-07 — RBAC, périmètre boutique, audit, gestion des utilisateurs
 8. P0-08 — Worker : jobs, outbox, retries, dead-letter
@@ -28,6 +30,7 @@
 ## Terminé
 | Date | Élément | Commit |
 |---|---|---|
+| 2026-11-02 | **P0-05** — API Fastify : `buildApp` injectable, config validée, erreurs uniformes (404/400/413/415/422/500 sans fuite), en-têtes de sécurité, CORS fermé, request-id, journal d'accès sans IP, `/health`, `/ready` (vraie base), OpenAPI 3.1 hors prod, serveur Node avec arrêt propre + entrée serverless ; ADR-0022 (pas de bundle) ; 143 tests | voir `git log` |
 | 2026-11-02 | **P0-04** — `@dz/db` : Prisma 7.10 (adaptateur pg), schéma socle (11 modèles), migration init + contraintes SQL, compteur atomique (100 incréments concurrents ⇒ 1..100), bases de test clonées depuis un modèle migré, contrôle de dérive ; 115 tests | `0f8562b` |
 | 2026-11-02 | **P0-03** — `@dz/core` : modules purs (`errors`, `money`, `time`, `ids`) et serveur (`env`, `logger` avec rédaction PII/secrets, `crypto` AES-256-GCM + rotation) ; frontières lint étendues ; 97 tests | `12afa1a` |
 | 2026-11-02 | **P0-02** — CI GitHub Actions (format, lint, typecheck, tests, build, service PostgreSQL 17, actions épinglées par SHA) ; `pnpm db:local` (Docker ou PostgreSQL natif, bases `dz_dev`/`dz_test`, idempotent) ; **CI run n°1 verte en 52 s** (37 tests exécutés, PostgreSQL 17.11) | `a15d448` |
@@ -74,6 +77,8 @@
   fichier de test) ; le package qui l'utilise doit déclarer le `globalSetup` de `@dz/db`
   (voir `packages/db/vitest.config.ts`). Bases `dz_test_tpl_*` / `dz_test_run_*` supprimées en fin
   de run ; après un crash, elles peuvent rester (sans risque, à supprimer à la main).
+- API : `pnpm --filter @dz/api dev` (charge le `.env` racine, `node --watch`) ; production
+  `node src/main-http.ts` (ADR-0022). Après `eslint --fix`, toujours reformater : `pnpm fix`.
 - Turbo 2 est en mode d'environnement strict : toute variable lue par une tâche doit être
   déclarée dans `turbo.json` (`env`), sinon elle n'arrive pas en CI.
 - Logs : un nom écrit en texte libre dans un message n'est pas détectable — ne jamais mettre de

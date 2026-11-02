@@ -10,6 +10,8 @@ export const ERROR_CODES = {
   FORBIDDEN: { status: 403 },
   NOT_FOUND: { status: 404 },
   CONFLICT: { status: 409 },
+  PAYLOAD_TOO_LARGE: { status: 413 },
+  UNSUPPORTED_MEDIA_TYPE: { status: 415 },
   RATE_LIMITED: { status: 429 },
   INTERNAL: { status: 500 },
   INVALID_CONFIGURATION: { status: 500 },

@@ -12,7 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@dz/core": "workspace:*"
+    "@dz/core": "workspace:*",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@dz/config": "workspace:*"

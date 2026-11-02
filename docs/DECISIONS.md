@@ -210,3 +210,16 @@
 - **Décision** : l'admin appelle toujours l'API via **`/api` sur sa propre origine** — réécriture
   Vercel en test, routage Caddy en production. Cookie de session de premier niveau, CORS fermé
   pour l'admin, CSRF limité par `SameSite` + en-tête personnalisé obligatoire.
+
+## ADR-0022 — API exécutée en TypeScript par Node 24, sans bundle
+**Statut** : Acceptée (2026-11-02)
+- **Contexte** : P0-05 prévoyait un bundle esbuild de l'API. Les packages internes sont consommés
+  en sources TypeScript ; bundler impose de lister à la main les dépendances externes (client
+  Prisma, `pg`, pino) et crée un écart entre le code testé et le code exécuté.
+- **Constat** : Node 24 exécute nativement le TypeScript « effaçable » (vérifié : toute la pile,
+  client Prisma 7 généré compris, tourne avec `node src/main-http.ts`).
+- **Décision** : pas d'étape de build pour l'API. Développement : `node --watch`, production :
+  `node src/main-http.ts` (image = installation de production du monorepo + `prisma generate`).
+  Le point d'entrée serverless est compilé par la plateforme (Vercel) à partir des mêmes sources.
+- **Conséquences** : `erasableSyntaxOnly` reste obligatoire (pas d'`enum`, de `namespace` ni de
+  propriétés de paramètres) ; le typecheck reste la barrière de typage ; esbuild retiré.

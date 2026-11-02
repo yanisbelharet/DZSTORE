@@ -117,6 +117,15 @@ describe('logger — rédaction des données personnelles et secrets', () => {
     expect(result.self).toBe('[Circular]');
   });
 
+  it('ne parcourt pas les objets non simples (sockets, flux, instances) ni les octets', () => {
+    class Socket {
+      remoteAddress = '41.200.10.5';
+      self = this;
+    }
+    const value = scrub({ socket: new Socket(), body: Buffer.from('secret'), list: new Map() });
+    expect(value).toEqual({ socket: '[Socket]', body: '[Binary]', list: '[Map]' });
+  });
+
   it('ne masque pas les montants, dates ni identifiants techniques', () => {
     const value = scrub({
       total: 4500,

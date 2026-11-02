@@ -108,8 +108,16 @@ function scrubValue(value: unknown, ancestors: Set<object>): unknown {
   if (ancestors.has(value)) return '[Circular]';
   ancestors.add(value);
   try {
-    if (value instanceof Error) return scrubValue(stdSerializers.err(value), ancestors);
+    // pino's serialized error has a custom prototype: copy its own fields into a plain object.
+    if (value instanceof Error) return scrubValue({ ...stdSerializers.err(value) }, ancestors);
     if (Array.isArray(value)) return value.map((item: unknown) => scrubValue(item, ancestors));
+    if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) return '[Binary]';
+    // Only plain objects are traversed: sockets, streams, requests, maps… are summarized by
+    // type so that logging never walks (or leaks) large internal structures.
+    const prototype: unknown = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      return `[${value.constructor.name || 'Object'}]`;
+    }
     const result: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value)) {
       result[key] = SENSITIVE_KEYS.has(normalizeKey(key)) ? REDACTED : scrubValue(item, ancestors);
