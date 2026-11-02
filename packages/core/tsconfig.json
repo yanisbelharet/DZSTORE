@@ -1,0 +1,4 @@
+{
+  "extends": "@dz/config/tsconfig.node.json",
+  "include": ["src"]
+}

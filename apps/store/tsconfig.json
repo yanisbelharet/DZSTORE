@@ -1,0 +1,4 @@
+{
+  "extends": "@dz/config/tsconfig.browser.json",
+  "include": ["src"]
+}

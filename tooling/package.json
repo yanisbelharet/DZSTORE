@@ -1,0 +1,14 @@
+{
+  "name": "@dz/tooling",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tests de l'outillage du monorepo (règles de lint, conventions).",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@dz/config": "workspace:*"
+  }
+}

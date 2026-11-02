@@ -1,0 +1,17 @@
+{
+  "name": "@dz/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Socle partagé : configuration, logs, erreurs, identifiants, crypto, argent, temps.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@dz/config": "workspace:*"
+  }
+}

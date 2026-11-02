@@ -1,0 +1,10 @@
+# Générés ou figés
+pnpm-lock.yaml
+docs/integrations/*.json
+**/dist/
+**/coverage/
+**/.turbo/
+**/.astro/
+
+# La documentation Markdown est maintenue à la main (tableaux, diagrammes)
+**/*.md

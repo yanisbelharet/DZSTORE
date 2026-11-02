@@ -1,0 +1,20 @@
+{
+  "name": "@dz/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Schémas Zod des échanges API, partagés avec l'admin, le store et le mobile.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dz/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@dz/config": "workspace:*"
+  }
+}

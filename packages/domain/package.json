@@ -1,0 +1,20 @@
+{
+  "name": "@dz/domain",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Logique métier pure (sans I/O) : états, prix, anti-fraude, gains, stock, RBAC.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dz/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@dz/config": "workspace:*"
+  }
+}

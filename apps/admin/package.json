@@ -1,0 +1,20 @@
+{
+  "name": "@dz/admin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "OMS et back-office (React + Vite, à partir de P0-09).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dz/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@dz/config": "workspace:*"
+  }
+}
