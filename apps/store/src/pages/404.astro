@@ -1,0 +1,17 @@
+---
+import StoreLayout from '../layouts/StoreLayout.astro';
+import { alternates } from '../lib/locale-routing.ts';
+import { pageContext } from '../lib/page-context.ts';
+
+const { store, locale, t } = pageContext(Astro.locals);
+const homePath = alternates('/', store).find((version) => version.locale === locale)?.path ?? '/';
+Astro.response.status = 404;
+---
+
+<StoreLayout title={`${t('notFound.title')} — ${store.name}`} noindex>
+  <section class="hero">
+    <h1>{t('notFound.title')}</h1>
+    <p>{t('notFound.body')}</p>
+    <a class="button" href={homePath}>{t('notFound.back')}</a>
+  </section>
+</StoreLayout>

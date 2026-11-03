@@ -3,6 +3,7 @@ node_modules/
 dist/
 build/
 .astro/
+.vercel/
 .turbo/
 coverage/
 *.tsbuildinfo

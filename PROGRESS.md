@@ -4,13 +4,13 @@
 > chaque tâche (`/tache`) et de chaque session (`/fin-session`).
 
 ## État actuel
-- **Phase** : 0 — Fondations (en cours : 9/12 tâches).
+- **Phase** : 0 — Fondations (en cours : 10/12 tâches).
 - **Mode** : enchaînement autonome de la Phase 0 sans validation des plans (accord du propriétaire
   le 2026-11-02) ; arrêt uniquement sur blocage ou décision qui lui revient.
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : `/tache P0-10` (store : coquille).
+- **Prochaine action** : `/tache P0-11` (seed déterministe et fabriques de test).
 
 ## File d'attente — Phase 0 (détails et critères : `docs/ROADMAP.md`)
 1. ~~P0-01 — Monorepo et outillage qualité~~ ✅
@@ -22,7 +22,7 @@
 7. ~~P0-07 — RBAC, périmètre boutique, audit, gestion des utilisateurs~~ ✅
 8. ~~P0-08 — Worker : jobs, outbox, retries, dead-letter~~ ✅
 9. ~~P0-09 — Admin : coquille (fr/en, connexion + 2FA, utilisateurs, palette)~~ ✅
-10. P0-10 — Store : coquille (résolution par hôte, ar RTL / fr, budgets Lighthouse)
+10. ~~P0-10 — Store : coquille (résolution par hôte, ar RTL / fr, budgets Lighthouse)~~ ✅
 11. P0-11 — Seed déterministe et fabriques de test
 12. P0-12 — Déploiement de test sur Vercel + Neon (prérequis : comptes créés par le propriétaire)
 13. Checkpoint 0 (`/checkpoint`, tag `cp-0`)
@@ -30,6 +30,7 @@
 ## Terminé
 | Date | Élément | Commit |
 |---|---|---|
+| 2026-11-03 | **P0-10** — Store Astro 7 SSR (adaptateur Node ou Vercel choisi au build) + Preact : boutique résolue par l'en-tête `Host` via `GET /v1/public/stores/resolve` (nouvel accès `service`, jeton de service), cache mémoire (TTL, coalescence, périmé si API en panne, borné) ; langue par préfixe (défaut de la boutique sans préfixe, 301 sinon), `dir="rtl"` en arabe ; thème en variables CSS ; police Cairo auto-hébergée ; CSP par hachages + `frame-ancestors`, en-têtes de sécurité et de cache CDN ; 404 boutique, 404/503 bilingues, `/health` ; ADR-0024 ; e2e mobile/desktop (2 hôtes, ar/fr, 404, 503) + budgets Lighthouse (perf 0,99–1, a11y/SEO 1, 0 Ko de JS) | voir `git log` |
 | 2026-11-02 | **P0-09** — Admin React 19 + Vite 8 + TanStack Router/Query, Tailwind 4 : connexion, enrôlement et vérification 2FA (QR, codes de secours), coquille (navigation selon les permissions, sélecteur de boutique, fr/en, tiroir mobile), palette `Ctrl+K` et raccourcis, gestion des utilisateurs (liste filtrable, création, édition, actions critiques confirmées) ; `/v1/auth/me` renvoie permissions et boutiques ; pages chargées à la demande ; e2e Playwright (3 parcours réels, captures mobile/desktop) + job CI e2e ; 223 tests | voir `git log` |
 | 2026-11-02 | **P0-08** — File de jobs PostgreSQL maison (ADR-0023, remplace pg-boss) : diffusion outbox exactement une fois, backoff + jitter, dead-letter, report sans essai consommé, clé de concurrence (index unique partiel), bail, tâches planifiées, `runTick` (worker en boucle + `/v1/internal/tick`), admin des jobs en échec ; worker réel vérifié | voir `git log` |
 | 2026-11-02 | **P0-07** — RBAC : matrice du domaine (23 permissions × 4 rôles), règle d'accès obligatoire sur chaque route `/v1` (sinon démarrage refusé), contrôle en `onRequest` (403 avant validation), test automatique routes × rôles (prouvé par mutation) ; périmètre boutique dans la session ; gestion des comptes (ADMIN ne gère que les agents, révocation des sessions sur changement de droits) ; journal d'audit consultable ; script `create-owner` ; 203 tests | voir `git log` |
@@ -108,3 +109,15 @@
   captures dans `apps/admin/test-results/screenshots/` (non versionnées, artefact CI).
 - Vitest : échec intermittent possible au premier run après un changement de lockfile (BUG-001) ;
   relancer.
+- Store : `pnpm --filter @dz/store dev` charge le `.env` racine (variables `STORE_*` +
+  `STORE_SERVICE_TOKEN` identique côté API) ; boutiques locales sur `http://<hôte>.localhost:4321`
+  (Chromium résout `*.localhost`), hôtes enregistrés dans `StoreDomain` (seed : P0-11). La CSP
+  n'est pas appliquée par `astro dev` : la vérifier sur un build (`astro build` + `pnpm start`).
+- Store : la boutique vient de l'en-tête `Host` brut, jamais de `X-Forwarded-Host` ni de
+  `Astro.url` (qui vaut `localhost`, ADR-0024). Conséquence à traiter avec le formulaire de
+  commande (P2) : le contrôle d'origine d'Astro (`checkOrigin`) compare à `Astro.url` ⇒ s'appuyer
+  sur `Sec-Fetch-Site` / un contrôle maison, à tester en e2e.
+- Store : favicon neutre commune (`public/favicon.svg`) ; favicon/logo par boutique avec les
+  réglages de boutique. Sélection d'une boutique de démo sur `*.vercel.app` : P0-12.
+- Lighthouse : exécuté dans Playwright (projet `lighthouse`, Chromium `channel: 'chromium'`) ;
+  rapports HTML/JSON dans `apps/store/test-results/lighthouse/` (artefact CI).

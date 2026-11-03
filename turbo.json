@@ -7,7 +7,8 @@
     },
     "build": {
       "dependsOn": ["^build", "generate"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", ".vercel/output/**"],
+      "env": ["STORE_ADAPTER"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck", "generate"]
@@ -20,5 +21,6 @@
       "cache": false,
       "persistent": true
     }
-  }
+  },
+  "globalPassThroughEnv": ["ASTRO_TELEMETRY_DISABLED"]
 }

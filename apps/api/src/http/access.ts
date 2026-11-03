@@ -1,3 +1,5 @@
+import { SERVICE_TOKEN_HEADER } from '@dz/contracts';
+import { safeEqual } from '@dz/core/crypto';
 import { AppError } from '@dz/core/errors';
 import { can } from '@dz/domain';
 import type { Permission } from '@dz/domain';
@@ -8,11 +10,12 @@ import type { AnyApp } from './types.ts';
 
 /**
  * Access rule every `/v1/*` route must declare (ADR-0008):
- * - `public`: no session (login, public store endpoints with their own guard);
+ * - `public`: no session (login, logout, routes with their own guard such as the tick);
+ * - `service`: the storefront server, identified by its service token (`/v1/public/*`);
  * - `authenticated`: any signed-in user (own profile, sessions…);
  * - `{ permission }`: the user's roles must grant this permission.
  */
-export type Access = 'public' | 'authenticated' | { permission: Permission };
+export type Access = 'public' | 'service' | 'authenticated' | { permission: Permission };
 
 declare module 'fastify' {
   interface FastifyContextConfig {
@@ -35,6 +38,7 @@ export interface RouteAccess {
  */
 export function registerAccessControl<L extends FastifyBaseLogger, P extends FastifyTypeProvider>(
   app: AnyApp<L, P>,
+  options: { serviceToken: string | undefined },
 ): RouteAccess[] {
   const routes: RouteAccess[] = [];
   app.addHook('onRoute', (route) => {
@@ -50,6 +54,20 @@ export function registerAccessControl<L extends FastifyBaseLogger, P extends Fas
   app.addHook('onRequest', (request, _reply, done) => {
     const { access, allowPendingTwoFactor } = request.routeOptions.config;
     if (access === undefined || access === 'public') {
+      done();
+      return;
+    }
+    if (access === 'service') {
+      // No token configured ⇒ every service call is refused (never an open endpoint).
+      const provided = request.headers[SERVICE_TOKEN_HEADER];
+      const { serviceToken } = options;
+      if (
+        serviceToken === undefined ||
+        typeof provided !== 'string' ||
+        !safeEqual(provided, serviceToken)
+      ) {
+        throw new AppError('UNAUTHENTICATED', 'Invalid service token');
+      }
       done();
       return;
     }

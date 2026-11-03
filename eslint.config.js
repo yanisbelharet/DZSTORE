@@ -119,6 +119,12 @@ export default defineConfig(
     rules: restrictImports(NO_DB, NO_DOMAIN, NO_SERVER_CORE),
   },
   {
+    // Server-only code of the storefront (middleware services): configuration and logs allowed,
+    // still no database nor business logic (the API owns them).
+    files: ['apps/store/src/server/**'],
+    rules: restrictImports(NO_DB, NO_DOMAIN),
+  },
+  {
     files: ['packages/core/**'],
     rules: restrictImports({
       group: [
@@ -184,9 +190,9 @@ export default defineConfig(
     },
   },
   {
-    // Tooling files of the admin (Vite, Playwright, e2e): typechecked by tsconfig.node.json.
+    // Tooling files of the apps (Vite, Astro, Playwright, e2e): typechecked by tsconfig.node.json.
     // End-to-end tests prepare their own database, hence the database import.
-    files: ['apps/admin/*.config.ts', 'apps/admin/e2e/**/*.ts'],
+    files: ['apps/{admin,store}/*.config.ts', 'apps/{admin,store}/e2e/**/*.ts'],
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: { globals: globals.node },
     rules: restrictImports(),

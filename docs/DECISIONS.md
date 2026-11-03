@@ -246,3 +246,29 @@ L'outbox transactionnelle d'ADR-0006 est conservée ; seul le moteur de file cha
   plusieurs ticks simultanés traitent des jobs disjoints (pas de verrou global nécessaire).
   Le code de la file (~300 lignes) est à maintenir et couvert par des tests d'intégration.
 - **Écartée** : pg-boss (API et schéma tiers, diffusion au moins une fois, moins adapté au tick).
+
+## ADR-0024 — Store : boutique résolue par l'en-tête `Host`, CSP par hachages
+**Statut** : Acceptée (2026-11-03, P0-10)
+- **Contexte** : le store sert plusieurs boutiques sur des domaines ajoutés à chaud ; son HTML
+  est identique pour tous les visiteurs et mis en cache au CDN, avec une clé qui inclut l'hôte.
+  Astro ne fait confiance à l'hôte (et à `X-Forwarded-Host`) que s'il figure dans une liste
+  **statique** (`security.allowedDomains`) ; sinon `Astro.url` vaut `localhost`.
+- **Décision** :
+  - la boutique est résolue à partir de l'en-tête **`Host` brut** (celui de la clé de cache du
+    CDN), **jamais** depuis `X-Forwarded-Host` (un client pourrait sinon faire rendre la
+    boutique B sous l'URL de A et empoisonner le cache — risque R9) ; `allowedDomains` reste vide ;
+  - le store ne lit pas la base : il appelle `GET /v1/public/stores/resolve?host=` avec le jeton
+    de service (`x-dz-service-token`, nouvelle règle d'accès `service` côté API) ; cache mémoire
+    court (60 s, 10 s pour un hôte inconnu), un seul appel simultané par hôte, boutique périmée
+    servie jusqu'à 1 h si l'API tombe, taille bornée ; hôte inconnu ou boutique inactive ⇒ 404
+    bilingue ; API injoignable ⇒ 503 jamais mis en cache ;
+  - langue par préfixe : langue par défaut **de la boutique** sans préfixe, autres langues en
+    `/<langue>/…` (réécriture vers une seule page) ; préfixe de la langue par défaut ⇒ 301 ;
+  - **CSP par hachages** calculée par Astro (`security.csp`) et envoyée en en-tête ; le
+    middleware y ajoute `frame-ancestors` (configuration d'exécution). Remplace le `nonce` prévu
+    dans ARCHITECTURE §6 : un nonce serait partagé par tous les visiteurs d'une page en cache,
+    donc sans valeur. Les scripts des pixels seront ajoutés par `scriptDirective.resources`.
+- **Conséquences** : un domaine ne sert une boutique que s'il est enregistré dans `StoreDomain`
+  ; en production, Caddy ne route que les hôtes connus (le cache mémoire est de toute façon
+  borné). L'environnement de test Vercel (domaines `*.vercel.app`) choisira la boutique de démo
+  autrement (P0-12, hors production uniquement).

@@ -42,6 +42,8 @@ export const apiEnvSchema = baseEnvSchema.extend({
   SESSION_COOKIE_SECURE: flag('true'),
   /** Enables POST /v1/internal/tick (serverless job processing). Unset = endpoint disabled. */
   TICK_SECRET: z.string().min(32, { error: 'at least 32 characters' }).optional(),
+  /** Shared with the storefront server for `/v1/public/*`. Unset = those routes refuse all calls. */
+  STORE_SERVICE_TOKEN: z.string().min(32, { error: 'at least 32 characters' }).optional(),
 });
 
 export interface ApiConfig {
@@ -58,6 +60,7 @@ export interface ApiConfig {
   encryptionKeys: KeyRing;
   cookieSecure: boolean;
   tickSecret: string | undefined;
+  storeServiceToken: string | undefined;
 }
 
 export function loadApiConfig(source: EnvSource = process.env): ApiConfig {
@@ -75,5 +78,6 @@ export function loadApiConfig(source: EnvSource = process.env): ApiConfig {
     encryptionKeys: parseEncryptionKeys(env.APP_ENCRYPTION_KEYS),
     cookieSecure: env.SESSION_COOKIE_SECURE,
     tickSecret: env.TICK_SECRET,
+    storeServiceToken: env.STORE_SERVICE_TOKEN,
   };
 }

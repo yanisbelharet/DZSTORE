@@ -90,6 +90,12 @@ describe('règles de dépendance entre packages', () => {
         'apps/store/src/x.ts',
         "import { createLogger } from '@dz/core/logger';\n" + use('createLogger'),
       ],
+      // Server part of the storefront: still no database nor business logic.
+      ['apps/store/src/server/x.ts', "import { dbPackage } from '@dz/db';\n" + use('dbPackage')],
+      [
+        'apps/store/src/server/x.ts',
+        "import { domainPackage } from '@dz/domain';\n" + use('domainPackage'),
+      ],
     ])('%s : import interdit', async (file, code) => {
       expect(await boundaryViolations(file, code)).toEqual(['no-restricted-imports']);
     });
@@ -132,6 +138,12 @@ describe('règles de dépendance entre packages', () => {
         'apps/api/src/x.ts',
         "import { createLogger } from '@dz/core/logger';\n" + use('createLogger'),
       ],
+      // Server part of the storefront (middleware): configuration and logs.
+      [
+        'apps/store/src/server/x.ts',
+        "import { createLogger } from '@dz/core/logger';\n" + use('createLogger'),
+      ],
+      ['apps/store/src/server/x.ts', "import { loadEnv } from '@dz/core/env';\n" + use('loadEnv')],
     ])('%s : autorisé', async (file, code) => {
       expect(await boundaryViolations(file, code)).toEqual([]);
     });

@@ -1,0 +1,13 @@
+---
+import StoreLayout from '../layouts/StoreLayout.astro';
+import { pageContext } from '../lib/page-context.ts';
+
+const { store, t } = pageContext(Astro.locals);
+---
+
+<StoreLayout title={store.name}>
+  <section class="hero">
+    <h1>{t('home.title', { store: store.name })}</h1>
+    <p>{t('home.soon')}</p>
+  </section>
+</StoreLayout>

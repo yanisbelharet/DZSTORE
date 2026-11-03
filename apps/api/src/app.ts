@@ -30,6 +30,7 @@ import { requestIdFrom } from './http/request-id.ts';
 import { registerAuthentication } from './modules/auth/plugin.ts';
 import { auditRoutes } from './modules/audit/routes.ts';
 import { authRoutes } from './modules/auth/routes.ts';
+import { publicStoresRoutes } from './modules/stores/public-routes.ts';
 import { storesRoutes } from './modules/stores/routes.ts';
 import { usersRoutes } from './modules/users/routes.ts';
 import { healthRoutes } from './routes/health.ts';
@@ -113,7 +114,7 @@ export async function buildApp({
   await app.register(cookie);
   const authDeps = { db, clock, secretBox };
   registerAuthentication(app, { ...authDeps, cookieSecure: config.cookieSecure });
-  const routeAccess = registerAccessControl(app);
+  const routeAccess = registerAccessControl(app, { serviceToken: config.storeServiceToken });
   app.decorate('routeAccess', routeAccess);
 
   await app.register(swagger, {
@@ -133,6 +134,7 @@ export async function buildApp({
   await app.register(healthRoutes, { checkDatabase, readyTimeoutMs });
   await app.register(usersRoutes, { prefix: '/v1/users', deps: { db, clock } });
   await app.register(storesRoutes, { prefix: '/v1/stores', db });
+  await app.register(publicStoresRoutes, { prefix: '/v1/public/stores', db });
   await app.register(auditRoutes, { prefix: '/v1/audit', db });
   await app.register(jobsRoutes, { prefix: '/v1/jobs', db });
   await app.register(tickRoutes, { prefix: '/v1/internal', jobs, tickSecret: config.tickSecret });

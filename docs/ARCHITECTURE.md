@@ -529,8 +529,9 @@ la file (`concurrencyKey = carrier:<compteId>`), garantie par un index unique pa
   jamais placés dans `OutboxEvent` ou un payload de job (on y met l'identifiant du compte).
 
 ### Confiance store ↔ API
-- Routes `/v1/public/*` acceptées **uniquement** avec l'en-tête de jeton de service (secret
-  partagé, comparaison à temps constant) ; l'IP client est lue dans `X-Client-IP` fourni par le
+- Routes `/v1/public/*` acceptées **uniquement** avec l'en-tête de jeton de service
+  `x-dz-service-token` (secret partagé `STORE_SERVICE_TOKEN`, comparaison à temps constant,
+  règle d'accès `service` ; aucune session utilisateur ne le remplace) ; l'IP client est lue dans `X-Client-IP` fourni par le
   store (lui-même depuis `CF-Connecting-IP`), jamais depuis la requête brute.
 
 ### Limitation de débit (en plus des règles WAF Cloudflare)
@@ -546,9 +547,12 @@ la file (`concurrencyKey = carrier:<compteId>`), garantie par un index unique pa
 ### En-têtes et protections web
 - HSTS (préchargement), `X-Content-Type-Options`, `Referrer-Policy: strict-origin-when-cross-origin`,
   `Permissions-Policy` restrictive.
-- **CSP store** : `script-src 'self' 'nonce-…'` + domaines officiels des pixels Meta et TikTok
-  uniquement ; `frame-ancestors` limité à l'origine admin (aperçu du builder) ; pas de
-  `unsafe-eval`.
+- **CSP store** (ADR-0024) : hachages calculés par Astro pour scripts et styles (pas de nonce :
+  le HTML est partagé par le cache CDN), `default-src 'self'` + domaines officiels des pixels
+  Meta et TikTok uniquement (phase pixels) ; `frame-ancestors` = origine admin (aperçu du
+  builder, `STORE_FRAME_ANCESTORS`) sinon `'none'` ; ni `unsafe-inline` ni `unsafe-eval`.
+- **Store multi-domaine** (ADR-0024) : boutique résolue depuis l'en-tête `Host` brut, jamais
+  `X-Forwarded-Host` (empoisonnement du cache CDN, R9).
 - **CSP admin** : `default-src 'self'`, `connect-src` = API, `frame-src` = domaines des boutiques
   (aperçu), `frame-ancestors 'none'`.
 - CSRF : admin et API sur la même origine (ADR-0021), cookie `SameSite=Lax` + en-tête

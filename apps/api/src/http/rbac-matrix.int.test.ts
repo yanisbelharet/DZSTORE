@@ -94,4 +94,19 @@ describe('matrice RBAC : chaque route × chaque rôle', () => {
       expect(res.statusCode, `${route.method} ${route.url}`).toBe(401);
     }
   });
+
+  it('les routes « service » (store) refusent les anonymes et toute session utilisateur', async () => {
+    const serviceRoutes = app.routeAccess.filter((route) => route.access === 'service');
+    expect(serviceRoutes.length).toBeGreaterThan(0);
+    for (const route of serviceRoutes) {
+      for (const headers of [{}, ...sessions.values()]) {
+        const res = await app.inject({
+          method: route.method as 'GET',
+          url: concreteUrl(route.url),
+          headers,
+        });
+        expect(res.statusCode, `${route.method} ${route.url}`).toBe(401);
+      }
+    }
+  });
 });

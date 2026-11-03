@@ -40,4 +40,14 @@ describe('contrôle d’accès déclaratif', () => {
       'POST /v1/internal/tick',
     ]);
   });
+
+  it('les routes de service (store) sont toutes sous /v1/public/ et réciproquement', async () => {
+    app = await buildApp(testDependencies());
+    await app.ready();
+    for (const route of app.routeAccess) {
+      expect(route.access === 'service', `${route.method} ${route.url}`).toBe(
+        route.url.startsWith('/v1/public/'),
+      );
+    }
+  });
 });

@@ -1,0 +1,84 @@
+---
+import '@fontsource-variable/cairo';
+import '../styles/global.css';
+import arabicFont from '@fontsource-variable/cairo/files/cairo-arabic-wght-normal.woff2?url';
+import latinFont from '@fontsource-variable/cairo/files/cairo-latin-wght-normal.woff2?url';
+
+import { LANGUAGE_NAMES } from '../i18n/index.ts';
+import { alternates } from '../lib/locale-routing.ts';
+import { pageContext } from '../lib/page-context.ts';
+import { themeCss } from '../lib/theme.ts';
+import { cspHash } from '../server/csp.ts';
+
+interface Props {
+  title: string;
+  description?: string;
+  /** Error pages: not indexed, no canonical URL. */
+  noindex?: boolean;
+}
+
+const { title, description, noindex = false } = Astro.props;
+const { store, locale, dir, path, origin, t } = pageContext(Astro.locals);
+
+const themeStyle = themeCss(store.theme);
+// Absent only if CSP is disabled in astro.config.ts — then no hash is needed.
+Astro.csp?.insertStyleHash(cspHash(themeStyle));
+
+const versions = alternates(path, store);
+const current = versions.find((version) => version.locale === locale);
+const homePath = alternates('/', store).find((version) => version.locale === locale)?.path ?? '/';
+const year = new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: 'Africa/Algiers' }).format(new Date());
+---
+
+<!doctype html>
+<html lang={locale} dir={dir}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description ?? t('meta.description', { store: store.name })} />
+    {noindex && <meta name="robots" content="noindex" />}
+    {!noindex && current && <link rel="canonical" href={`${origin}${current.path}`} />}
+    {!noindex && versions.length > 1 && versions.map((version) => (
+      <link rel="alternate" hreflang={version.locale} href={`${origin}${version.path}`} />
+    ))}
+    <meta name="theme-color" content={store.theme.colors.primary} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href={locale === 'ar' ? arabicFont : latinFont} as="font" type="font/woff2" crossorigin="anonymous" />
+    <style is:inline set:html={themeStyle} />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href={homePath}>{store.name}</a>
+        {versions.length > 1 && (
+          <nav aria-label={t('nav.language')}>
+            <ul class="languages">
+              {versions.map((version) => (
+                <li>
+                  <a
+                    href={version.path}
+                    hreflang={version.locale}
+                    lang={version.locale}
+                    aria-current={version.locale === locale ? 'true' : undefined}
+                  >
+                    {LANGUAGE_NAMES[version.locale]}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+      </div>
+    </header>
+    <main id="main" class="container">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="container">
+        <span class="badge">{t('footer.cod')}</span>
+        <span>{t('footer.rights', { year, store: store.name })}</span>
+      </div>
+    </footer>
+  </body>
+</html>
