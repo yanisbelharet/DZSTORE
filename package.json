@@ -21,6 +21,7 @@
     "db:generate": "pnpm --filter @dz/db generate",
     "db:migrate": "pnpm --filter @dz/db migrate:dev",
     "db:deploy": "pnpm --filter @dz/db migrate:deploy",
+    "db:seed": "pnpm --filter @dz/api seed",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "devDependencies": {

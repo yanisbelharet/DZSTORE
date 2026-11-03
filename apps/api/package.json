@@ -14,7 +14,8 @@
     "worker": "node src/main-worker.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "create-owner": "node --env-file-if-exists=../../.env src/cli/create-owner.ts"
+    "create-owner": "node --env-file-if-exists=../../.env src/cli/create-owner.ts",
+    "seed": "node --env-file-if-exists=../../.env src/cli/seed.ts"
   },
   "dependencies": {
     "@dz/contracts": "workspace:*",

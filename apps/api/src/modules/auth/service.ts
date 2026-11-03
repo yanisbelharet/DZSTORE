@@ -48,7 +48,8 @@ async function enforceRateLimit(
   }
 }
 
-const totpContext = (userId: string) => `user-totp:${userId}`;
+/** Encryption context of a user's TOTP secret (also used by the demo seed). */
+export const totpContext = (userId: string) => `user-totp:${userId}`;
 
 async function totpSecretOf(deps: AuthDependencies, user: User): Promise<string> {
   if (!user.totpSecretId) throw new AppError('CONFLICT', 'Two-factor setup has not been started');

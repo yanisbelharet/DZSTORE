@@ -29,7 +29,8 @@ commit) · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build` · `pn
 proxy `/api` → API locale) · `pnpm --filter @dz/store dev` (store, `http://<domaine>.localhost:4321`)
 · `pnpm test:e2e` (Playwright : API + admin + store réels sur des bases recréées, budgets
 Lighthouse) · `pnpm fix` (corrige lint + format).
-À venir : `pnpm db:seed` (ajoutée ici quand elle existe).
+`pnpm db:seed` (données de démo idempotentes, refusées en production ; `--reset` = base locale
+uniquement, jamais sans accord du propriétaire).
 Migrations : toute contrainte non exprimable en Prisma est ajoutée en SQL dans la migration et
 listée dans ARCHITECTURE §3 ; jamais de modification d'une migration déjà poussée.
 
