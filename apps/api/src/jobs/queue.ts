@@ -56,6 +56,13 @@ export interface DomainEvent {
  * Writes an outbox event in the caller's transaction (ADR-0006). `at` comes from the application
  * clock, like every time the job engine compares against.
  */
-export async function publishEvent(db: DbExecutor, event: DomainEvent, at: Date): Promise<void> {
-  await db.outboxEvent.create({ data: { ...event, availableAt: at, createdAt: at } });
+export async function publishEvent(
+  db: DbExecutor,
+  event: DomainEvent,
+  at: Date,
+): Promise<{ id: bigint }> {
+  return db.outboxEvent.create({
+    data: { ...event, availableAt: at, createdAt: at },
+    select: { id: true },
+  });
 }

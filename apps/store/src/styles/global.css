@@ -133,3 +133,14 @@ main {
   font-weight: 700;
   color: var(--color-text);
 }
+
+.test-banner {
+  margin: 0;
+  padding-block: 0.375rem;
+  padding-inline: 1rem;
+  background: #fef3c7;
+  color: #78350f;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-align: center;
+}

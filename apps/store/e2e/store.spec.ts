@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-import { STORE_NO_API_PORT, storeUrl } from '../playwright.config.ts';
+import { STORE_NO_API_PORT, STORE_TEST_ENV_PORT, storeUrl } from '../playwright.config.ts';
 import { INACTIVE_HOST, STORE_A, STORE_B, UNKNOWN_HOST } from './fixtures.ts';
 
 const SHOTS = 'test-results/screenshots';
@@ -174,6 +174,25 @@ test.describe('store — résolution par hôte, langues, en-têtes', () => {
     await expect(
       page.getByRole('heading', { name: 'Boutique momentanément indisponible' }),
     ).toBeVisible();
+  });
+
+  test('environnement de test : mention visible, pages exclues des moteurs de recherche', async ({
+    page,
+  }, info) => {
+    const response = await page.goto(storeUrl(STORE_A.host, '/', STORE_TEST_ENV_PORT));
+    expect(response?.status()).toBe(200);
+    expect(response?.headers()['x-robots-tag']).toBe('noindex, nofollow');
+    await expect(page.getByRole('note')).toHaveText('بيئة تجريبية — لا توجد مبيعات حقيقية');
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
+    await page.screenshot({ path: `${SHOTS}/a-test-env-${info.project.name}.png`, fullPage: true });
+    await page.goto(storeUrl(STORE_B.host, '/', STORE_TEST_ENV_PORT));
+    await expect(page.getByRole('note')).toHaveText('Environnement de test — aucune vente réelle');
+  });
+
+  test('hors environnement de test : ni mention ni exclusion', async ({ page }) => {
+    const response = await page.goto(storeUrl(STORE_A.host));
+    expect(response?.headers()['x-robots-tag']).toBeUndefined();
+    await expect(page.getByRole('note')).toHaveCount(0);
   });
 
   test('sonde de vie /health, sans boutique ni API', async ({ page }) => {

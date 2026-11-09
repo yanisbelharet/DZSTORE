@@ -29,6 +29,8 @@ export const storeEnvSchema = baseEnvSchema.extend({
   STORE_RESOLVE_TTL_SECONDS: z.coerce.number().int().min(0).max(3_600).default(60),
   /** Origins allowed to frame the store (admin, for the landing builder preview). Empty = none. */
   STORE_FRAME_ANCESTORS: originList,
+  /** `test` on the free test deployment: visible banner, pages excluded from search engines. */
+  DEPLOYMENT_ENVIRONMENT: z.enum(['local', 'test', 'production']).optional(),
 });
 
 export interface StoreConfig {
@@ -39,6 +41,7 @@ export interface StoreConfig {
   apiTimeoutMs: number;
   resolveTtlMs: number;
   frameAncestors: string[];
+  testEnvironment: boolean;
 }
 
 export function loadStoreConfig(source: EnvSource = process.env): StoreConfig {
@@ -51,5 +54,6 @@ export function loadStoreConfig(source: EnvSource = process.env): StoreConfig {
     apiTimeoutMs: env.STORE_API_TIMEOUT_MS,
     resolveTtlMs: env.STORE_RESOLVE_TTL_SECONDS * 1000,
     frameAncestors: env.STORE_FRAME_ANCESTORS,
+    testEnvironment: env.DEPLOYMENT_ENVIRONMENT === 'test',
   };
 }

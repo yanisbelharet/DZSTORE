@@ -12,6 +12,8 @@ declare global {
       path?: string;
       /** Canonical origin (`https://` + primary domain, or the requested host). */
       origin?: string;
+      /** Free test deployment: banner and no indexing. */
+      testEnvironment?: boolean;
     }
   }
 }

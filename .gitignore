@@ -28,3 +28,6 @@ Thumbs.db
 
 # Client Prisma généré (pnpm install / pnpm db:generate)
 **/src/generated/
+
+# Bundle serverless de l’API (Vercel, ADR-0025)
+.vercel-build/

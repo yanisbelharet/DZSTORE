@@ -15,4 +15,5 @@ export const fr = {
   'unknownStore.title': 'Cette boutique n’existe pas',
   'unavailable.title': 'Boutique momentanément indisponible',
   'unavailable.body': 'Merci de réessayer dans quelques instants.',
+  'testEnvironment.banner': 'Environnement de test — aucune vente réelle',
 } as const satisfies Record<keyof typeof ar, string>;

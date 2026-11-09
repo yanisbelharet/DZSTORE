@@ -22,6 +22,7 @@ test.describe.serial('admin — parcours OWNER puis agent', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
     await expect(page).toHaveURL(/\/login$/u);
+    await expect(page.getByRole('note')).toHaveText('Environnement de test — aucune vente réelle');
     await page.screenshot({ path: `${SHOTS}/login-mobile.png`, fullPage: true });
 
     await login(page, OWNER.email, 'mauvais mot de passe');
@@ -81,6 +82,17 @@ test.describe.serial('admin — parcours OWNER puis agent', () => {
     await page.screenshot({ path: `${SHOTS}/users-desktop-en.png`, fullPage: true });
     await page.getByRole('combobox', { name: 'Language' }).selectOption('fr');
     await expect(page.getByRole('heading', { name: 'Utilisateurs' })).toBeVisible();
+
+    // Job pipeline from the admin (test environment, no permanent worker).
+    await page.getByRole('navigation').getByRole('link', { name: 'Système' }).click();
+    await expect(page.getByRole('heading', { name: 'Système' })).toBeVisible();
+    await page.getByRole('button', { name: 'Envoyer un événement de test' }).click();
+    await expect(page.getByText(/Événement de test n° \d+ publié/u)).toBeVisible();
+    await page.getByRole('button', { name: 'Lancer un tour de traitement' }).click();
+    await expect(page.getByTestId('tick-relayed')).toHaveText('1');
+    await expect(page.getByTestId('tick-dead')).toHaveText('0');
+    await expect(page.getByRole('cell', { name: 'system.test-event' })).toBeVisible();
+    await page.screenshot({ path: `${SHOTS}/system-desktop.png`, fullPage: true });
   });
 
   test('agent : pas d’accès à la gestion des utilisateurs', async ({ page }) => {
@@ -89,6 +101,9 @@ test.describe.serial('admin — parcours OWNER puis agent', () => {
     await expect(
       page.getByRole('navigation').getByRole('link', { name: 'Utilisateurs' }),
     ).toHaveCount(0);
+    await expect(page.getByRole('navigation').getByRole('link', { name: 'Système' })).toHaveCount(
+      0,
+    );
     await page.goto('/users');
     await expect(page.getByTestId('forbidden')).toBeVisible();
     await page.screenshot({ path: `${SHOTS}/forbidden-desktop.png`, fullPage: true });

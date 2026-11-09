@@ -11,5 +11,7 @@ if (existsSync(rootEnvFile)) process.loadEnvFile(rootEnvFile);
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: { path: 'prisma/migrations' },
-  datasource: { url: process.env.DATABASE_URL ?? '' },
+  // Migrations need a direct connection: Neon's pooler (PgBouncer, transaction mode) is only
+  // for the application (ADR-0025). Locally, DATABASE_URL is already direct.
+  datasource: { url: process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL ?? '' },
 });

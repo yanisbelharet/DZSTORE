@@ -1,5 +1,8 @@
 {
-  "app": { "name": "DZ Commerce OS", "admin": "Administration" },
+  "app": {
+    "name": "DZ Commerce OS",
+    "admin": "Administration"
+  },
   "common": {
     "save": "Enregistrer",
     "cancel": "Annuler",
@@ -26,7 +29,8 @@
     "logout": "Se déconnecter",
     "menu": "Menu",
     "allStores": "Toutes les boutiques",
-    "store": "Boutique"
+    "store": "Boutique",
+    "system": "Système"
   },
   "auth": {
     "title": "Connexion",
@@ -137,5 +141,39 @@
     "TOO_SHORT": "Le mot de passe doit contenir au moins 12 caractères.",
     "SAME_AS_EMAIL": "Le mot de passe ne doit pas être votre e-mail.",
     "LOW_VARIETY": "Le mot de passe est trop simple."
+  },
+  "environment": {
+    "test": "Environnement de test — aucune vente réelle"
+  },
+  "system": {
+    "title": "Système",
+    "queueTitle": "File de jobs",
+    "queueEmpty": "Aucun job enregistré.",
+    "queue": "File",
+    "status": "Statut",
+    "count": "Nombre",
+    "refresh": "Actualiser",
+    "processingTitle": "Traitement",
+    "processingHelp": "Sans worker permanent (environnement de test), les jobs sont traités par tours : un service de planification externe en lance un toutes les 30 minutes, vous pouvez aussi en lancer un ici.",
+    "tick": "Lancer un tour de traitement",
+    "tickDone": "Tour de traitement terminé",
+    "testEvent": "Envoyer un événement de test",
+    "testEventDone": "Événement de test n° {{id}} publié : il sera traité au prochain tour.",
+    "lastTick": "Dernier tour",
+    "stats": {
+      "recovered": "Repris (bail expiré)",
+      "relayed": "Événements relayés",
+      "scheduled": "Tâches planifiées lancées",
+      "succeeded": "Jobs réussis",
+      "retried": "Jobs reportés",
+      "dead": "Jobs en échec définitif"
+    },
+    "jobStatus": {
+      "PENDING": "En attente",
+      "RUNNING": "En cours",
+      "SUCCEEDED": "Réussi",
+      "DEAD": "Échec définitif",
+      "CANCELLED": "Annulé"
+    }
   }
 }

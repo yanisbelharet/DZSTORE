@@ -19,6 +19,7 @@ interface Props {
 
 const { title, description, noindex = false } = Astro.props;
 const { store, locale, dir, path, origin, t } = pageContext(Astro.locals);
+const testEnvironment = Astro.locals.testEnvironment === true;
 
 const themeStyle = themeCss(store.theme);
 // Absent only if CSP is disabled in astro.config.ts — then no hash is needed.
@@ -37,7 +38,7 @@ const year = new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: 'Africa/
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description ?? t('meta.description', { store: store.name })} />
-    {noindex && <meta name="robots" content="noindex" />}
+    {(noindex || testEnvironment) && <meta name="robots" content="noindex" />}
     {!noindex && current && <link rel="canonical" href={`${origin}${current.path}`} />}
     {!noindex && versions.length > 1 && versions.map((version) => (
       <link rel="alternate" hreflang={version.locale} href={`${origin}${version.path}`} />
@@ -48,6 +49,7 @@ const year = new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: 'Africa/
     <style is:inline set:html={themeStyle} />
   </head>
   <body>
+    {testEnvironment && <p class="test-banner" role="note">{t('testEnvironment.banner')}</p>}
     <header class="site-header">
       <div class="container">
         <a class="brand" href={homePath}>{store.name}</a>

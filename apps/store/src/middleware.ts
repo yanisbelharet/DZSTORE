@@ -56,6 +56,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.path = route.path;
     // Canonical URLs always use https and the primary domain when the store has one.
     context.locals.origin = `https://${store.primaryHost ?? hostname ?? ''}`;
+    context.locals.testEnvironment = runtime.config.testEnvironment;
     // A language prefix is a rewrite: one page file serves every language.
     rendered = route.path === pathname ? await next() : await next(`${route.path}${search}`);
   }
@@ -74,5 +75,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (!response.headers.has('cache-control'))
     response.headers.set('cache-control', cacheControlFor(response.status));
   if (route.kind === 'page') response.headers.set('content-language', route.locale);
+  if (runtime.config.testEnvironment) response.headers.set('x-robots-tag', 'noindex, nofollow');
   return response;
 });

@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Command } from 'cmdk';
-import { Home, Keyboard, Languages, LogOut, UserCog, Users } from 'lucide-react';
+import { Activity, Home, Keyboard, Languages, LogOut, UserCog, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -84,6 +84,16 @@ export function CommandPalette({
               }}
             >
               {t('nav.users')}
+            </Item>
+          ) : null}
+          {can(me, 'jobs.manage') ? (
+            <Item
+              icon={<Activity size={16} />}
+              onSelect={() => {
+                run(() => navigate({ to: '/system' }));
+              }}
+            >
+              {t('nav.system')}
             </Item>
           ) : null}
           <Item

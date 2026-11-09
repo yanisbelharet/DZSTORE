@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-router';
 
 import { AppShell } from './components/app-shell.tsx';
+import { EnvironmentBanner } from './components/environment-banner.tsx';
 import { ErrorView, ForbiddenView, NotFoundView } from './components/states.tsx';
 import { can, loadMe } from './lib/session.ts';
 import type { Me } from './lib/session.ts';
@@ -20,13 +21,19 @@ const authPage = (name: 'LoginPage' | 'TwoFactorSetupPage' | 'TwoFactorVerifyPag
 const usersPage = (name: 'UsersPage' | 'UserFormPage') =>
   lazyRouteComponent(() => import('./pages/users.tsx'), name);
 const AccountPage = lazyRouteComponent(() => import('./pages/account.tsx'), 'AccountPage');
+const SystemPage = lazyRouteComponent(() => import('./pages/system.tsx'), 'SystemPage');
 
 interface RouterContext {
   queryClient: QueryClient;
 }
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
-  component: Outlet,
+  component: () => (
+    <>
+      <EnvironmentBanner />
+      <Outlet />
+    </>
+  ),
   notFoundComponent: NotFoundView,
   errorComponent: ({ error, reset }) => (
     <div className="p-8">
@@ -104,6 +111,12 @@ const accountRoute = createRoute({
   path: '/account',
   component: AccountPage,
 });
+const systemRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/system',
+  beforeLoad: requirePermission('jobs.manage'),
+  component: SystemPage,
+});
 const forbiddenRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/forbidden',
@@ -120,6 +133,7 @@ const routeTree = rootRoute.addChildren([
     userNewRoute,
     userEditRoute,
     accountRoute,
+    systemRoute,
     forbiddenRoute,
   ]),
 ]);

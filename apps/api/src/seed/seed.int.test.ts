@@ -105,6 +105,36 @@ describe('seed de démonstration', () => {
     expect(await testDb.db.store.count()).toBe(DEMO_STORES.length);
   });
 
+  it('domaines publics (environnement de test) : deviennent principaux, sans clé de chiffrement', async () => {
+    const plan = planSeed({
+      nodeEnv: 'production',
+      deploymentEnvironment: 'test',
+      databaseUrl: 'postgresql://user:pw@ep-demo-pooler.neon.tech/neondb',
+      reset: false,
+      password: 'Mot de passe du test 2026',
+      storeHosts: 'demo-beaute=dzstore-beaute.vercel.app',
+    });
+    await seedDemo({ db: testDb.db }, plan);
+    const domains = await testDb.db.storeDomain.findMany({
+      where: { store: { slug: 'demo-beaute' } },
+      orderBy: { hostname: 'asc' },
+      select: { hostname: true, isPrimary: true },
+    });
+    expect(domains).toEqual([
+      { hostname: 'beaute.localhost', isPrimary: false },
+      { hostname: 'dzstore-beaute.vercel.app', isPrimary: true },
+    ]);
+    const before = await snapshot();
+    expect(await seedDemo({ db: testDb.db }, plan)).toMatchObject({ created: 0, updated: 0 });
+    expect(await snapshot()).toEqual(before);
+    // Back to the local plan: the local domain becomes primary again (still one primary).
+    await seedDemo({ db: testDb.db, secretBox }, localPlan());
+    const primaries = await testDb.db.storeDomain.count({
+      where: { store: { slug: 'demo-beaute' }, isPrimary: true },
+    });
+    expect(primaries).toBe(1);
+  });
+
   it('le compte OWNER de démo se connecte avec le mot de passe et le code TOTP documentés', async () => {
     const clock = fixedClock('2026-11-03T09:00:00Z');
     const app = await buildApp(

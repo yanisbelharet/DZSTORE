@@ -272,3 +272,31 @@ L'outbox transactionnelle d'ADR-0006 est conservée ; seul le moteur de file cha
   ; en production, Caddy ne route que les hôtes connus (le cache mémoire est de toute façon
   borné). L'environnement de test Vercel (domaines `*.vercel.app`) choisira la boutique de démo
   autrement (P0-12, hors production uniquement).
+
+## ADR-0025 — Environnement de test Vercel + Neon : bundle de l'API, domaines par boutique
+**Statut** : Acceptée (2026-11-09, P0-12) — choix délégués par le propriétaire.
+- **Contexte** : la documentation Vercel ne garantit ni les imports `.ts` ni les packages internes
+  consommés en sources TypeScript ; un projet Vercel à « Root Directory » ne voit pas
+  directement les autres packages. La sélection d'une boutique de démo « par paramètre »
+  (ARCHITECTURE, version initiale) créerait un chemin de code propre au test.
+- **Décision** :
+  - **API** : au déploiement Vercel uniquement, `scripts/vercel-build.ts` applique les
+    migrations (connexion directe `DATABASE_URL_UNPOOLED`), le seed si `SEED_ON_DEPLOY=true`, puis
+    assemble `src/serverless.ts` en **un seul fichier ESM** avec Vite (déjà utilisé par l'admin) ;
+    seuls les modules natifs restent externes (Argon2). `api/index.mjs` réexporte ce bundle ;
+    toutes les routes y sont réécrites. Vérifié hors ligne avec le CLI officiel (`vercel build`) :
+    fonction `nodejs24.x`, binaire Argon2 embarqué. Le VPS de production garde ADR-0022 (pas de
+    bundle). `NODEJS_HELPERS=0` : Fastify lit lui-même le corps des requêtes.
+  - **Store** : deux domaines `*.vercel.app` gratuits sur le même projet, enregistrés comme
+    domaines principaux des boutiques de démo (`SEED_STORE_HOSTS`) : aucune sélection par
+    paramètre, même résolution par hôte qu'en production (ADR-0024).
+  - **Marqueur `DEPLOYMENT_ENVIRONMENT=test`** : mention visible dans le store et l'admin,
+    `noindex` ; c'est aussi la **seule** exception au refus du seed avec `NODE_ENV=production`
+    (jamais de réinitialisation, jamais de mot de passe ou de 2FA de démo publics hors local).
+  - **Tick** : planificateur externe gratuit toutes les 30 min sur `/v1/internal/tick` (le cron
+    Vercel Hobby est limité à une exécution par jour) + bouton « Système » dans l'admin.
+- **Conséquences** : le code exécuté sur Vercel est un artefact de build (sources identiques,
+  testées en CI) ; noms de projets fixés (`dzstore-api`, `dzstore-admin`, `dzstore-store`)
+  car la réécriture `/api` de l'admin cible un domaine en dur ; guide pas à pas dans
+  `docs/deploiement-test.md`.
+

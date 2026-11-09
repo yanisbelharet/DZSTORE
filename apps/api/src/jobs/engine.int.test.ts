@@ -13,6 +13,7 @@ import type { Subscriptions } from './engine.ts';
 import { NonRetryableJobError, RetryLaterError } from './errors.ts';
 import { publishEvent } from './queue.ts';
 import { defineJob, JobRegistry } from './registry.ts';
+import { SYSTEM_TEST_PROCESSED, systemJobs } from './system.ts';
 
 let testDb: TestDatabase;
 beforeAll(async () => {
@@ -323,6 +324,67 @@ describe('API des jobs', () => {
       where: { entityType: 'Job', entityId: dead.id.toString() },
     });
     expect(audit.map((entry) => entry.action).sort()).toEqual(['job.cancelled', 'job.retried']);
+    await app.close();
+  });
+
+  it('événement de test publié depuis l’API, relayé et traité par un tick lancé par un admin', async () => {
+    const clock = fixedClock('2026-11-06T10:00:00Z');
+    const app = await buildApp(testDependencies({ db: testDb.db, clock }));
+    await app.ready();
+    const admin = await signedInAs(testDb.db, ['ADMIN']);
+    const published = await app.inject({
+      method: 'POST',
+      url: '/v1/jobs/test-event',
+      headers: admin.headers,
+    });
+    expect(published.statusCode).toBe(202);
+    const { outboxEventId } = published.json<{ outboxEventId: string }>();
+
+    const tick = await app.inject({ method: 'POST', url: '/v1/jobs/tick', headers: admin.headers });
+    expect(tick.statusCode).toBe(200);
+    expect(tick.json()).toMatchObject({ relayed: 1, dead: 0 });
+    expect(tick.json<{ succeeded: number }>().succeeded).toBeGreaterThanOrEqual(1);
+    const processed = () =>
+      testDb.db.auditLog.count({
+        where: { action: SYSTEM_TEST_PROCESSED, entityId: outboxEventId },
+      });
+    expect(await processed()).toBe(1);
+
+    // Nothing left to relay; the job handler itself is idempotent (at-least-once execution).
+    const again = await app.inject({
+      method: 'POST',
+      url: '/v1/jobs/tick',
+      headers: admin.headers,
+    });
+    expect(again.json()).toMatchObject({ relayed: 0 });
+    const job = systemJobs[0];
+    if (!job) throw new Error('system job missing');
+    const context = { jobId: 1n, attempt: 2, db: testDb.db, clock, logger: memoryLogger().logger };
+    await job.run({ outboxEventId }, context);
+    expect(await processed()).toBe(1);
+
+    const actions = await testDb.db.auditLog.findMany({
+      where: { action: { in: ['jobs.tick', 'system.test_event.published'] } },
+      select: { action: true, actorUserId: true },
+    });
+    expect(actions.filter((entry) => entry.action === 'jobs.tick')).toHaveLength(2);
+    expect(actions.every((entry) => entry.actorUserId === admin.user.id)).toBe(true);
+    await app.close();
+  });
+
+  it('relance d’un job : échéance = horloge de l’application (BUG-002)', async () => {
+    const clock = fixedClock('2026-11-06T12:00:00Z');
+    const app = await buildApp(testDependencies({ db: testDb.db, clock }));
+    const owner = await signedInAs(testDb.db, ['OWNER']);
+    const dead = await testDb.db.job.create({
+      data: { queue: 'maintenance.purge-sessions', payload: {}, status: 'DEAD', attempts: 8 },
+    });
+    const retry = await app.inject({
+      method: 'POST',
+      url: `/v1/jobs/${dead.id.toString()}/retry`,
+      headers: owner.headers,
+    });
+    expect(retry.json()).toMatchObject({ runAt: '2026-11-06T12:00:00.000Z' });
     await app.close();
   });
 

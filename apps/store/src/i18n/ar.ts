@@ -13,4 +13,5 @@ export const ar = {
   'unknownStore.title': 'هذا المتجر غير موجود',
   'unavailable.title': 'المتجر غير متاح مؤقتًا',
   'unavailable.body': 'يرجى المحاولة مرة أخرى بعد قليل.',
+  'testEnvironment.banner': 'بيئة تجريبية — لا توجد مبيعات حقيقية',
 } as const;

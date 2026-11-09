@@ -31,6 +31,7 @@ proxy `/api` → API locale) · `pnpm --filter @dz/store dev` (store, `http://<d
 Lighthouse) · `pnpm fix` (corrige lint + format).
 `pnpm db:seed` (données de démo idempotentes, refusées en production ; `--reset` = base locale
 uniquement, jamais sans accord du propriétaire).
+Environnement de test en ligne : `docs/deploiement-test.md` (Vercel + Neon, ADR-0025).
 Migrations : toute contrainte non exprimable en Prisma est ajoutée en SQL dans la migration et
 listée dans ARCHITECTURE §3 ; jamais de modification d'une migration déjà poussée.
 

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Outlet, useNavigate, useRouteContext } from '@tanstack/react-router';
-import { Home, LogOut, Menu, UserCog, Users } from 'lucide-react';
+import { Activity, Home, LogOut, Menu, UserCog, Users } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -58,7 +58,7 @@ function StoreSwitcher() {
 
 function NavLinks({ me, onNavigate }: { me: Me; onNavigate?: () => void }) {
   const { t } = useTranslation();
-  const link = (to: '/' | '/users' | '/account', icon: ReactNode, label: string) => (
+  const link = (to: '/' | '/users' | '/account' | '/system', icon: ReactNode, label: string) => (
     <Link
       to={to}
       onClick={onNavigate}
@@ -73,6 +73,7 @@ function NavLinks({ me, onNavigate }: { me: Me; onNavigate?: () => void }) {
     <nav className="flex flex-col gap-1" aria-label={t('nav.menu')}>
       {link('/', <Home size={18} />, t('nav.home'))}
       {can(me, 'users.read') ? link('/users', <Users size={18} />, t('nav.users')) : null}
+      {can(me, 'jobs.manage') ? link('/system', <Activity size={18} />, t('nav.system')) : null}
       {link('/account', <UserCog size={18} />, t('nav.account'))}
     </nav>
   );

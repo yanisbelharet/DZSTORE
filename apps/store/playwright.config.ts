@@ -6,6 +6,8 @@ const API_PORT = 3102;
 export const STORE_PORT = 4322;
 /** Second storefront instance whose API is unreachable (503 path). */
 export const STORE_NO_API_PORT = 4323;
+/** Third instance flagged as the free test deployment (DEPLOYMENT_ENVIRONMENT=test). */
+export const STORE_TEST_ENV_PORT = 4324;
 export const E2E_DATABASE = 'dz_e2e_store';
 export const SERVICE_TOKEN = 'e2e-store-service-token-0123456789abcdef';
 const testDatabase = process.env.DATABASE_URL_TEST ?? 'postgresql://dz:dz@localhost:5432/dz_test';
@@ -67,6 +69,9 @@ export default defineConfig({
     storeServer(STORE_NO_API_PORT, 'http://127.0.0.1:9', {
       LOG_LEVEL: 'silent',
       STORE_API_TIMEOUT_MS: '500',
+    }),
+    storeServer(STORE_TEST_ENV_PORT, `http://127.0.0.1:${String(API_PORT)}`, {
+      DEPLOYMENT_ENVIRONMENT: 'test',
     }),
   ],
 });

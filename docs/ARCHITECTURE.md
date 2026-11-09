@@ -117,10 +117,10 @@ un **environnement de test gratuit et non commercial** tourne sur Vercel.
 
 | Composant | Où | Notes |
 |---|---|---|
-| `store` | projet Vercel (adaptateur Astro Vercel) | domaine `*.vercel.app` ; seconde boutique de démo sélectionnable par paramètre, autorisé **uniquement** hors production |
-| `admin` | projet Vercel (statique) | `/api/*` réécrit vers le projet API (ADR-0021) |
-| `api` | projet Vercel (fonction Fastify) | jobs en mode tick (ADR-0020) : traitement après réponse + `/v1/internal/tick` |
-| PostgreSQL | Neon Free | veille automatique ; migrations appliquées au déploiement de test |
+| `store` | projet Vercel `dzstore-store` (adaptateur Astro Vercel) | deux domaines gratuits `dzstore-beaute.vercel.app` et `dzstore-maison.vercel.app`, un par boutique de démo, résolus par l'hôte comme en production (ADR-0024, ADR-0025) ; mention « environnement de test » et `noindex` |
+| `admin` | projet Vercel `dzstore-admin` (statique) | `/api/*` réécrit vers `dzstore-api.vercel.app` (ADR-0021) ; mention « environnement de test » |
+| `api` | projet Vercel `dzstore-api` (une fonction Node 24) | bundle Vite produit au déploiement (ADR-0025) ; jobs en mode tick (ADR-0020) : `/v1/internal/tick` (planificateur externe, 30 min) et bouton « Système » de l'admin |
+| PostgreSQL | Neon Free (intégration Vercel) | `DATABASE_URL` poolée pour l'application, `DATABASE_URL_UNPOOLED` directe pour les migrations appliquées au déploiement ; seed de démo à la demande (`SEED_ON_DEPLOY`) |
 | médias | stockage objet gratuit via `MediaStorage` | — |
 | transporteur | faux transporteur | EcoTrack réel seulement pour des essais ponctuels validés |
 

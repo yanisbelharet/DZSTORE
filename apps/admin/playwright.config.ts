@@ -47,6 +47,8 @@ export default defineConfig({
       env: {
         ADMIN_API_TARGET: `http://127.0.0.1:${String(API_PORT)}`,
         ADMIN_PORT: String(ADMIN_PORT),
+        // Built as the free test deployment: the banner must be visible on every page.
+        VITE_DEPLOYMENT_ENVIRONMENT: 'test',
       },
     },
   ],

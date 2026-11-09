@@ -4,14 +4,15 @@
 > chaque tâche (`/tache`) et de chaque session (`/fin-session`).
 
 ## État actuel
-- **Phase** : 0 — Fondations (en cours : 11/12 tâches).
-- **Mode** : enchaînement autonome de la Phase 0 sans validation des plans (accord du propriétaire
-  le 2026-11-02) ; arrêt uniquement sur blocage ou décision qui lui revient.
+- **Phase** : 0 — Fondations (12/12 tâches ; P0-12 prêt, déploiement réel en attente des comptes).
+- **Mode** : autonomie complète (propriétaire, 2026-11-09 : « continue, fais les choix toi-même,
+  ne me demande aucune acceptation ») ; décisions consignées en ADR et dans les comptes rendus.
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : `/tache P0-12` (préparer le déploiement de test Vercel + Neon ; le
-  déploiement réel attend les comptes du propriétaire).
+- **Prochaine action** : Checkpoint 0 (`/checkpoint`), puis Phase 1. Déploiement réel de P0-12
+  dès que le propriétaire fournit un jeton Vercel et une clé Neon (formulaire sécurisé depuis
+  claude.ai sur ordinateur — l'app mobile ne l'affiche pas) ou suit `docs/deploiement-test.md`.
 
 ## File d'attente — Phase 0 (détails et critères : `docs/ROADMAP.md`)
 1. ~~P0-01 — Monorepo et outillage qualité~~ ✅
@@ -25,12 +26,13 @@
 9. ~~P0-09 — Admin : coquille (fr/en, connexion + 2FA, utilisateurs, palette)~~ ✅
 10. ~~P0-10 — Store : coquille (résolution par hôte, ar RTL / fr, budgets Lighthouse)~~ ✅
 11. ~~P0-11 — Seed déterministe et fabriques de test~~ ✅
-12. P0-12 — Déploiement de test sur Vercel + Neon (prérequis : comptes créés par le propriétaire)
+12. ~~P0-12 — Déploiement de test sur Vercel + Neon~~ ✅ préparé et vérifié hors ligne ; mise en ligne en attente des comptes
 13. Checkpoint 0 (`/checkpoint`, tag `cp-0`)
 
 ## Terminé
 | Date | Élément | Commit |
 |---|---|---|
+| 2026-11-09 | **P0-12** — Environnement de test prêt : API assemblée en un fichier par Vite pour Vercel (migrations directes + seed à la demande + bundle ; vérifié avec `vercel build` hors ligne : fonction `nodejs24.x`, Argon2 embarqué, et bundle servi réellement contre PostgreSQL), `vercel.json` des 3 projets, domaines `*.vercel.app` par boutique (seed `SEED_STORE_HOSTS`), marqueur `DEPLOYMENT_ENVIRONMENT=test` (mention + `noindex` store/admin), page admin « Système » (tour de traitement + événement de test traité via l'outbox, e2e), guide `docs/deploiement-test.md`, ADR-0025, BUG-002 corrigé | voir `git log` |
 | 2026-11-03 | **P0-11** — `pnpm db:seed` : 2 boutiques (`beaute.localhost`, `maison.localhost`) et 6 comptes (un par rôle + agent mixte), idempotent (2e exécution : rien ne change, pas même `updatedAt` — prouvé par mutation), répare les données de démo sans toucher au reste ; refus en production ; `--reset` réservé aux bases locales ; mot de passe et 2FA de démo publics **uniquement** en local, `SEED_DEMO_PASSWORD` exigé ailleurs ; connexion OWNER + TOTP de démo testée ; fabriques `createFactories` (`@dz/db/testing`) ; README « Données de démo » | voir `git log` |
 | 2026-11-03 | **P0-10** — Store Astro 7 SSR (adaptateur Node ou Vercel choisi au build) + Preact : boutique résolue par l'en-tête `Host` via `GET /v1/public/stores/resolve` (nouvel accès `service`, jeton de service), cache mémoire (TTL, coalescence, périmé si API en panne, borné) ; langue par préfixe (défaut de la boutique sans préfixe, 301 sinon), `dir="rtl"` en arabe ; thème en variables CSS ; police Cairo auto-hébergée ; CSP par hachages + `frame-ancestors`, en-têtes de sécurité et de cache CDN ; 404 boutique, 404/503 bilingues, `/health` ; ADR-0024 ; e2e mobile/desktop (2 hôtes, ar/fr, 404, 503) + budgets Lighthouse (perf 0,99–1, a11y/SEO 1, 0 Ko de JS) | voir `git log` |
 | 2026-11-02 | **P0-09** — Admin React 19 + Vite 8 + TanStack Router/Query, Tailwind 4 : connexion, enrôlement et vérification 2FA (QR, codes de secours), coquille (navigation selon les permissions, sélecteur de boutique, fr/en, tiroir mobile), palette `Ctrl+K` et raccourcis, gestion des utilisateurs (liste filtrable, création, édition, actions critiques confirmées) ; `/v1/auth/me` renvoie permissions et boutiques ; pages chargées à la demande ; e2e Playwright (3 parcours réels, captures mobile/desktop) + job CI e2e ; 223 tests | voir `git log` |
@@ -129,3 +131,10 @@
   phase par phase avec un générateur pseudo-aléatoire à graine fixe.
 - Arrêter un serveur lancé en arrière-plan par son PID exact : `pkill -f`/`pgrep -f` sur un
   motif présent dans la ligne de commande tue aussi le shell de l'outil.
+- Vercel (ADR-0025) : `pnpm --filter @dz/api vercel-build` reproduit le build de l'API (migrations,
+  seed si `SEED_ON_DEPLOY=true`, bundle `.vercel-build/server.mjs`). Vérification fidèle sans
+  compte : `vercel build` (CLI installé hors dépôt) avec un `.vercel/project.json` factice à la
+  racine (`rootDirectory: apps/api`) — supprimer `.vercel/` ensuite.
+- Node 24 est aussi fourni par l'image (`/opt/node24/bin`, 24.22.1) ; pnpm 10.28 est dans le PATH.
+- Les jetons (Vercel, Neon) ne peuvent pas être demandés depuis l'app mobile Claude : le
+  propriétaire doit ouvrir la session sur claude.ai depuis un ordinateur.

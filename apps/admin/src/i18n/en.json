@@ -1,5 +1,8 @@
 {
-  "app": { "name": "DZ Commerce OS", "admin": "Administration" },
+  "app": {
+    "name": "DZ Commerce OS",
+    "admin": "Administration"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -26,7 +29,8 @@
     "logout": "Sign out",
     "menu": "Menu",
     "allStores": "All stores",
-    "store": "Store"
+    "store": "Store",
+    "system": "System"
   },
   "auth": {
     "title": "Sign in",
@@ -137,5 +141,39 @@
     "TOO_SHORT": "The password must be at least 12 characters long.",
     "SAME_AS_EMAIL": "The password must not be your email.",
     "LOW_VARIETY": "The password is too simple."
+  },
+  "environment": {
+    "test": "Test environment — no real sales"
+  },
+  "system": {
+    "title": "System",
+    "queueTitle": "Job queue",
+    "queueEmpty": "No job recorded.",
+    "queue": "Queue",
+    "status": "Status",
+    "count": "Count",
+    "refresh": "Refresh",
+    "processingTitle": "Processing",
+    "processingHelp": "Without a permanent worker (test environment), jobs are processed in rounds: an external scheduler starts one every 30 minutes, and you can start one here.",
+    "tick": "Run a processing round",
+    "tickDone": "Processing round finished",
+    "testEvent": "Send a test event",
+    "testEventDone": "Test event #{{id}} published: it will be processed by the next round.",
+    "lastTick": "Last round",
+    "stats": {
+      "recovered": "Recovered (expired lease)",
+      "relayed": "Events relayed",
+      "scheduled": "Scheduled tasks started",
+      "succeeded": "Jobs succeeded",
+      "retried": "Jobs postponed",
+      "dead": "Jobs dead"
+    },
+    "jobStatus": {
+      "PENDING": "Pending",
+      "RUNNING": "Running",
+      "SUCCEEDED": "Succeeded",
+      "DEAD": "Dead",
+      "CANCELLED": "Cancelled"
+    }
   }
 }

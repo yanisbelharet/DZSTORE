@@ -1,3 +1,4 @@
+import type { Clock } from '@dz/core';
 import { AppError } from '@dz/core/errors';
 import { safeEqual } from '@dz/core/crypto';
 import type { DbClient, Job } from '@dz/db';
@@ -7,6 +8,8 @@ import { z } from 'zod';
 import { recordAudit } from '../modules/audit/audit.ts';
 import { requireAuth } from '../modules/auth/context.ts';
 import type { JobEngine } from './engine.ts';
+import { publishEvent } from './queue.ts';
+import { SYSTEM_TEST_EVENT } from './system.ts';
 
 const jobStatus = z.enum(['PENDING', 'RUNNING', 'SUCCEEDED', 'DEAD', 'CANCELLED']);
 const jobId = z.object({ id: z.coerce.bigint().positive() });
@@ -34,9 +37,22 @@ const toDto = (job: Job) => ({
 });
 
 const manage = { access: { permission: 'jobs.manage' } } as const;
+const tickStats = z.object({
+  recovered: z.number(),
+  relayed: z.number(),
+  scheduled: z.number(),
+  succeeded: z.number(),
+  retried: z.number(),
+  dead: z.number(),
+});
+/** Time budget of one tick, below the serverless function limit (ADR-0020). */
+const TICK_BUDGET_MS = 8_000;
 
 /** /v1/jobs — dead-letter queue and job monitoring (OWNER/ADMIN). */
-export const jobsRoutes: FastifyPluginAsyncZod<{ db: DbClient }> = (app, { db }) => {
+export const jobsRoutes: FastifyPluginAsyncZod<{ db: DbClient; jobs: JobEngine; clock: Clock }> = (
+  app,
+  { db, jobs, clock },
+) => {
   app.get(
     '/',
     {
@@ -103,7 +119,7 @@ export const jobsRoutes: FastifyPluginAsyncZod<{ db: DbClient }> = (app, { db })
       const auth = requireAuth(request);
       const { count } = await db.job.updateMany({
         where: { id: request.params.id, status: { in: ['DEAD', 'CANCELLED'] } },
-        data: { status: 'PENDING', attempts: 0, runAt: new Date(), finishedAt: null },
+        data: { status: 'PENDING', attempts: 0, runAt: clock.now(), finishedAt: null },
       });
       if (count === 0) throw new AppError('CONFLICT', 'Only dead or cancelled jobs can be retried');
       await recordAudit(db, {
@@ -132,7 +148,7 @@ export const jobsRoutes: FastifyPluginAsyncZod<{ db: DbClient }> = (app, { db })
       const auth = requireAuth(request);
       const { count } = await db.job.updateMany({
         where: { id: request.params.id, status: { in: ['PENDING', 'DEAD'] } },
-        data: { status: 'CANCELLED', finishedAt: new Date() },
+        data: { status: 'CANCELLED', finishedAt: clock.now() },
       });
       if (count === 0) throw new AppError('CONFLICT', 'Only pending or dead jobs can be cancelled');
       await recordAudit(db, {
@@ -144,6 +160,52 @@ export const jobsRoutes: FastifyPluginAsyncZod<{ db: DbClient }> = (app, { db })
         meta: { reason: request.body.reason },
       });
       return toDto(await db.job.findUniqueOrThrow({ where: { id: request.params.id } }));
+    },
+  );
+
+  // Test environment (serverless, no permanent worker): an admin runs a job round by hand.
+  app.post(
+    '/tick',
+    { config: manage, schema: { tags: ['jobs'], response: { 200: tickStats } } },
+    async (request) => {
+      const auth = requireAuth(request);
+      const stats = await jobs.runTick({ budgetMs: TICK_BUDGET_MS });
+      await recordAudit(db, {
+        actorType: 'USER',
+        actorUserId: auth.userId,
+        action: 'jobs.tick',
+        entityType: 'System',
+        meta: { ...stats },
+      });
+      return stats;
+    },
+  );
+
+  // Publishes a `system.test` outbox event: the next tick must relay and process it.
+  app.post(
+    '/test-event',
+    {
+      config: manage,
+      schema: { tags: ['jobs'], response: { 202: z.object({ outboxEventId: z.string() }) } },
+    },
+    async (request, reply) => {
+      const auth = requireAuth(request);
+      const event = await db.$transaction(async (tx) => {
+        const published = await publishEvent(
+          tx,
+          { type: SYSTEM_TEST_EVENT, aggregateType: 'System', aggregateId: 'test', payload: {} },
+          clock.now(),
+        );
+        await recordAudit(tx, {
+          actorType: 'USER',
+          actorUserId: auth.userId,
+          action: 'system.test_event.published',
+          entityType: 'OutboxEvent',
+          entityId: published.id.toString(),
+        });
+        return published;
+      });
+      return reply.code(202).send({ outboxEventId: event.id.toString() });
     },
   );
 
@@ -164,16 +226,7 @@ export const tickRoutes: FastifyPluginAsyncZod<{
       config: { access: 'public' },
       schema: {
         tags: ['jobs'],
-        response: {
-          200: z.object({
-            recovered: z.number(),
-            relayed: z.number(),
-            scheduled: z.number(),
-            succeeded: z.number(),
-            retried: z.number(),
-            dead: z.number(),
-          }),
-        },
+        response: { 200: tickStats },
       },
     },
     async (request) => {
@@ -182,7 +235,7 @@ export const tickRoutes: FastifyPluginAsyncZod<{
       if (typeof provided !== 'string' || !safeEqual(provided, tickSecret)) {
         throw new AppError('UNAUTHENTICATED', 'Invalid tick secret');
       }
-      return jobs.runTick({ budgetMs: 8_000 });
+      return jobs.runTick({ budgetMs: TICK_BUDGET_MS });
     },
   );
   return Promise.resolve();

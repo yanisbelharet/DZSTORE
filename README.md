@@ -53,6 +53,10 @@ Ces identifiants sont **publics** : ils ne sont appliqués que sur une base loca
 Lancer l'ensemble en local (trois terminaux) : `pnpm --filter @dz/api dev`,
 `pnpm --filter @dz/admin dev` (http://localhost:5173), `pnpm --filter @dz/store dev`.
 
+## Environnement de test en ligne
+Gratuit et non commercial (Vercel + Neon) : guide pas à pas dans
+[`docs/deploiement-test.md`](docs/deploiement-test.md).
+
 ## Intégration continue
 GitHub Actions (`.github/workflows/ci.yml`) lance format, lint, typecheck, tests et build à
 chaque push et pull request, avec un service PostgreSQL 17, puis les e2e Playwright (admin,

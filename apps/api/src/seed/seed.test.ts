@@ -28,6 +28,7 @@ describe('garde-fous du seed', () => {
       reset: true,
       password: DEMO_PASSWORD,
       preEnrolTwoFactor: true,
+      storeHosts: new Map(),
     });
   });
 
@@ -50,7 +51,59 @@ describe('garde-fous du seed', () => {
         reset: false,
         password: 'Un mot de passe solide',
       }),
-    ).toEqual({ reset: false, password: 'Un mot de passe solide', preEnrolTwoFactor: false });
+    ).toEqual({
+      reset: false,
+      password: 'Un mot de passe solide',
+      preEnrolTwoFactor: false,
+      storeHosts: new Map(),
+    });
+  });
+
+  it('déploiement de test marqué (DEPLOYMENT_ENVIRONMENT=test) : autorisé malgré NODE_ENV=production', () => {
+    const request = {
+      nodeEnv: 'production',
+      databaseUrl: REMOTE,
+      reset: false,
+      password: 'Un mot de passe solide',
+    } as const;
+    expect(() => planSeed({ ...request, deploymentEnvironment: 'production' })).toThrow(
+      /NODE_ENV=production/u,
+    );
+    expect(planSeed({ ...request, deploymentEnvironment: 'test' }).preEnrolTwoFactor).toBe(false);
+    // The marker never unlocks a reset of a remote database.
+    expect(() => planSeed({ ...request, deploymentEnvironment: 'test', reset: true })).toThrow(
+      /reset/u,
+    );
+  });
+
+  it('domaines publics des boutiques de démo (SEED_STORE_HOSTS)', () => {
+    const plan = planSeed({
+      nodeEnv: 'test',
+      databaseUrl: LOCAL,
+      reset: false,
+      password: undefined,
+      storeHosts: ' demo-beaute=dzstore-beaute.vercel.app , demo-maison=dzstore-maison.vercel.app ',
+    });
+    expect([...plan.storeHosts]).toEqual([
+      ['demo-beaute', 'dzstore-beaute.vercel.app'],
+      ['demo-maison', 'dzstore-maison.vercel.app'],
+    ]);
+    for (const invalid of [
+      'inconnue=x.vercel.app',
+      'demo-beaute',
+      'demo-beaute=Pas Un Hote',
+      'demo-beaute=a.dz:443',
+    ]) {
+      expect(() =>
+        planSeed({
+          nodeEnv: 'test',
+          databaseUrl: LOCAL,
+          reset: false,
+          password: undefined,
+          storeHosts: invalid,
+        }),
+      ).toThrow(/SEED_STORE_HOSTS/u);
+    }
   });
 
   it('le mot de passe choisi respecte la politique des comptes', () => {

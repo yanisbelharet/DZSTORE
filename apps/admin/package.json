@@ -4,6 +4,9 @@
   "private": true,
   "description": "OMS et back-office (React + Vite).",
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

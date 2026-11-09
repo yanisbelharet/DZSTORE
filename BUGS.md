@@ -21,7 +21,14 @@
 - **Test de régression** : —
 
 ## Résolus
-_Aucun._
+### BUG-002 — Relance/abandon d'un job : heure système au lieu de l'horloge de l'application
+- **Date** : 2026-11-06 · **Sévérité** : S4 · **Statut** : corrigé
+- **Symptôme** : `POST /v1/jobs/:id/retry` fixait `runAt` (et `/cancel` `finishedAt`) avec
+  `new Date()`, alors que toutes les heures de la file viennent de l'horloge de l'application
+  (P0-08). Sans effet visible en production ; faux en test avec une horloge figée.
+- **Cause racine** : les routes des jobs ne recevaient pas l'horloge.
+- **Correctif** : horloge injectée dans `jobsRoutes` (P0-12).
+- **Test de régression** : `apps/api/src/jobs/engine.int.test.ts` (« relance d'un job »).
 
 <!-- Modèle :
 ### BUG-001 — <titre court>

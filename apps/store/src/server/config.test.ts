@@ -16,7 +16,19 @@ describe('configuration du store', () => {
       apiTimeoutMs: 2000,
       resolveTtlMs: 60_000,
       frameAncestors: [],
+      testEnvironment: false,
     });
+  });
+
+  it('environnement de test signalé uniquement par DEPLOYMENT_ENVIRONMENT=test', () => {
+    const base = { STORE_API_URL: 'http://api:3000', STORE_SERVICE_TOKEN: TOKEN };
+    expect(loadStoreConfig({ ...base, DEPLOYMENT_ENVIRONMENT: 'test' }).testEnvironment).toBe(true);
+    expect(loadStoreConfig({ ...base, DEPLOYMENT_ENVIRONMENT: 'production' }).testEnvironment).toBe(
+      false,
+    );
+    expect(() => loadStoreConfig({ ...base, DEPLOYMENT_ENVIRONMENT: 'staging' })).toThrow(
+      /DEPLOYMENT_ENVIRONMENT/u,
+    );
   });
 
   it('normalise les origines autorisées à encadrer le store', () => {

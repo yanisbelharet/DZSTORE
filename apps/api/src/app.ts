@@ -9,6 +9,7 @@ import type { Logger } from '@dz/core/logger';
 import type { DbClient } from '@dz/db';
 
 import { maintenanceJobs, maintenanceSchedules } from './jobs/builtin.ts';
+import { systemJobs, systemSubscriptions } from './jobs/system.ts';
 import { createJobEngine } from './jobs/engine.ts';
 import type { JobEngine } from './jobs/engine.ts';
 import { JobRegistry } from './jobs/registry.ts';
@@ -62,7 +63,8 @@ export function createDefaultJobEngine({
     db,
     clock,
     logger,
-    registry: new JobRegistry(maintenanceJobs),
+    registry: new JobRegistry([...maintenanceJobs, ...systemJobs]),
+    subscriptions: systemSubscriptions,
     schedules: maintenanceSchedules,
   });
 }
@@ -136,7 +138,7 @@ export async function buildApp({
   await app.register(storesRoutes, { prefix: '/v1/stores', db });
   await app.register(publicStoresRoutes, { prefix: '/v1/public/stores', db });
   await app.register(auditRoutes, { prefix: '/v1/audit', db });
-  await app.register(jobsRoutes, { prefix: '/v1/jobs', db });
+  await app.register(jobsRoutes, { prefix: '/v1/jobs', db, jobs, clock });
   await app.register(tickRoutes, { prefix: '/v1/internal', jobs, tickSecret: config.tickSecret });
   await app.register(authRoutes, {
     prefix: '/v1/auth',
