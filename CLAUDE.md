@@ -21,10 +21,12 @@ IA. Qualité production exigée.
 
 ## Commandes (à la racine, Node 24 obligatoire)
 `pnpm install` · `pnpm check` (format + lint + typecheck + tests + build : à lancer avant chaque
-commit) · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build` · `pnpm format` · `pnpm dev` ·
+commit) · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build` · `pnpm format` · `pnpm dev`
+(API + worker + admin + store, rechargement à chaud) ·
 `pnpm db:local` (PostgreSQL local + bases `dz_dev`/`dz_test`) · `pnpm db:generate` (client Prisma) ·
 `pnpm db:migrate` (nouvelle migration en dev) · `pnpm db:deploy` (appliquer les migrations) ·
-`pnpm --filter @dz/api dev` (API locale) · `pnpm --filter @dz/api worker:dev` (worker local) ·
+`pnpm --filter @dz/api dev` (API + worker) · `pnpm --filter @dz/api dev:http` (API seule) ·
+`pnpm --filter @dz/api worker:dev` (worker seul) ·
 `pnpm --filter @dz/api create-owner --email … --name …` · `pnpm --filter @dz/admin dev` (admin,
 proxy `/api` → API locale) · `pnpm --filter @dz/store dev` (store, `http://<domaine>.localhost:4321`)
 · `pnpm test:e2e` (Playwright : API + admin + store réels sur des bases recréées, budgets

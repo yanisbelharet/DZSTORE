@@ -50,8 +50,8 @@ Ces identifiants sont **publics** : ils ne sont appliqués que sur une base loca
 (`localhost`). Sur une autre base (environnement de test Neon), le seed exige
 `SEED_DEMO_PASSWORD` et n'enrôle aucune 2FA (enrôlement à la première connexion).
 
-Lancer l'ensemble en local (trois terminaux) : `pnpm --filter @dz/api dev`,
-`pnpm --filter @dz/admin dev` (http://localhost:5173), `pnpm --filter @dz/store dev`.
+Lancer l'ensemble en local : `pnpm dev` (API + worker sur http://localhost:3000, admin sur
+http://localhost:5173, store sur http://beaute.localhost:4321 et http://maison.localhost:4321).
 
 ## Environnement de test en ligne
 Gratuit et non commercial (Vercel + Neon) : guide pas à pas dans
@@ -65,7 +65,7 @@ store) et les budgets Lighthouse du store.
 ## Commandes
 | Commande | Rôle |
 |---|---|
-| `pnpm dev` | lance les applications en développement |
+| `pnpm dev` | API + worker, admin et store en développement (rechargement à chaud) |
 | `pnpm lint` | ESLint (règles typées + frontières entre packages) |
 | `pnpm typecheck` | TypeScript strict, package par package |
 | `pnpm test` | tests Vitest de tous les packages |
