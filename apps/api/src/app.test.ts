@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { buildApp } from './app.ts';
 import type { App } from './app.ts';
+import type { ApiConfig } from './config.ts';
 import { CSRF, memoryLogger, testConfig, testDependencies } from './test/helpers.ts';
 
 let app: App | undefined;
@@ -267,5 +268,28 @@ describe('API — OpenAPI', () => {
     });
     expect((await server.inject({ method: 'GET', url: '/v1/openapi.json' })).statusCode).toBe(404);
     expect((await server.inject({ method: 'GET', url: '/docs' })).statusCode).toBe(404);
+  });
+});
+
+describe('API — adresse du client derrière un proxy', () => {
+  const whoAmI = async (trustProxy: ApiConfig['trustProxy']) => {
+    const app = await buildApp(testDependencies({ config: testConfig({ trustProxy }) }));
+    app.get('/whoami', (request) => ({ ip: request.ip }));
+    const res = await app.inject({
+      method: 'GET',
+      url: '/whoami',
+      remoteAddress: '10.0.0.2',
+      headers: { 'x-forwarded-for': '6.6.6.6, 203.0.113.9' },
+    });
+    await app.close();
+    return res.json<{ ip: string }>().ip;
+  };
+
+  it('un saut de confiance : l’adresse ajoutée par le proxy, jamais celle fournie par le client', async () => {
+    expect(await whoAmI(1)).toBe('203.0.113.9');
+  });
+
+  it('sans confiance : l’adresse de la connexion', async () => {
+    expect(await whoAmI(false)).toBe('10.0.0.2');
   });
 });

@@ -29,22 +29,30 @@ const missingAsset = () =>
  * Every page request: host → store (API, cached), language from the path, then security and
  * CDN cache headers. No store ⇒ a static status page; the pages never render without a store.
  */
+/** Security headers on responses built here (status pages, missing assets). */
+const withSecurityHeaders = (response: Response, headers: Readonly<Record<string, string>>) => {
+  for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
+  return response;
+};
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname, search } = context.url;
   // Liveness probe: no store, no API call.
   if (pathname === '/health') return next();
-  if (pathname.startsWith('/_astro/')) return missingAsset();
 
   const runtime = getRuntime();
+  if (pathname.startsWith('/_astro/'))
+    return withSecurityHeaders(missingAsset(), runtime.securityHeaders);
   const hostname = normalizeHostname(requestHost(context.request));
   let store: PublicStore | null;
   try {
     store = hostname === undefined ? null : await runtime.resolveStore(hostname);
   } catch (error) {
     runtime.logger.error({ err: error }, 'store resolution failed');
-    return statusPage('unavailable');
+    return withSecurityHeaders(statusPage('unavailable'), runtime.securityHeaders);
   }
-  if (store === null) return statusPage('unknownStore');
+  if (store === null)
+    return withSecurityHeaders(statusPage('unknownStore'), runtime.securityHeaders);
 
   const route = routeLocale(pathname, store, search);
   let rendered: Response;

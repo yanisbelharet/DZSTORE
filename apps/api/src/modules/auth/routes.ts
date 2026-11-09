@@ -62,6 +62,13 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = (
   { deps, cookieSecure },
 ) => {
   const cookieName = sessionCookieName(cookieSecure);
+  // Same attributes as when set: a `__Host-` cookie cleared without `Secure` is ignored.
+  const clearOptions = {
+    path: '/',
+    httpOnly: true,
+    secure: cookieSecure,
+    sameSite: 'lax',
+  } as const;
   const requestInfo = (request: {
     ip: string;
     headers: { 'user-agent'?: string | undefined };
@@ -135,7 +142,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = (
     { config: { access: 'public' }, schema: { tags: ['auth'] } },
     async (request, reply) => {
       if (request.auth) await revokeSession(deps.db, deps.clock, request.auth.sessionId);
-      reply.clearCookie(cookieName, { path: '/' });
+      reply.clearCookie(cookieName, clearOptions);
       return reply.status(204).send();
     },
   );
@@ -146,7 +153,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = (
     async (request, reply) => {
       const auth = requireAuth(request);
       await revokeUserSessions(deps.db, deps.clock, auth.userId);
-      reply.clearCookie(cookieName, { path: '/' });
+      reply.clearCookie(cookieName, clearOptions);
       return reply.status(204).send();
     },
   );

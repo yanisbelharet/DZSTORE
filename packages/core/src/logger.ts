@@ -77,7 +77,31 @@ const SENSITIVE_KEYS = new Set(
   ].map(normalizeKey),
 );
 
+/**
+ * Any key CONTAINING one of these (normalized) fragments is a secret too: `tickSecret`,
+ * `x-dz-service-token`, `storeServiceToken`, `recoveryCode`… without listing every name.
+ */
+const SENSITIVE_KEY_FRAGMENTS = [
+  'password',
+  'secret',
+  'token',
+  'cookie',
+  'authorization',
+  'apikey',
+  'recoverycode',
+];
+
+const isSensitiveKey = (key: string): boolean => {
+  const normalized = normalizeKey(key);
+  return (
+    SENSITIVE_KEYS.has(normalized) ||
+    SENSITIVE_KEY_FRAGMENTS.some((part) => normalized.includes(part))
+  );
+};
+
 const VALUE_PATTERNS: readonly (readonly [RegExp, string])[] = [
+  // Credentials embedded in a URL (`postgresql://user:password@host/db`), any scheme.
+  [/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+(?::[^\s/@]*)?@/giu, '$1[REDACTED]@'],
   // URLs: keep origin and path, drop query string and fragment (EcoTrack sends api_token there)
   [/\b(https?:\/\/[^\s?#"'<>]+)[?#][^\s"'<>]*/giu, '$1?[REDACTED]'],
   [
@@ -120,7 +144,7 @@ function scrubValue(value: unknown, ancestors: Set<object>): unknown {
     }
     const result: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value)) {
-      result[key] = SENSITIVE_KEYS.has(normalizeKey(key)) ? REDACTED : scrubValue(item, ancestors);
+      result[key] = isSensitiveKey(key) ? REDACTED : scrubValue(item, ancestors);
     }
     return result;
   } finally {

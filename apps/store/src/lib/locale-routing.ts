@@ -17,7 +17,8 @@ export function routeLocale(pathname: string, store: StoreLocales, search = ''):
   const [, first = '', ...rest] = pathname.split('/');
   const isStoreLocale = (store.locales as readonly string[]).includes(first);
   if (!isStoreLocale) return { kind: 'page', locale: store.defaultLocale, path: pathname };
-  const path = `/${rest.join('/')}`;
+  // Collapse leading slashes: `/ar//evil.com` must never redirect to `//evil.com` (open redirect).
+  const path = `/${rest.join('/')}`.replace(/^\/{2,}/u, '/');
   if (first === store.defaultLocale) return { kind: 'redirect', location: `${path}${search}` };
   return { kind: 'page', locale: first as StoreLocale, path };
 }

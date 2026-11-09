@@ -257,6 +257,7 @@ export async function changePassword(
   input: { currentPassword: string; newPassword: string },
 ) {
   const { db, clock } = deps;
+  await enforceRateLimit(deps, RATE_LIMITS.passwordChangeByUser, userId);
   const user = await db.user.findUniqueOrThrow({ where: { id: userId } });
   if (!(await verifyPassword(user.passwordHash, input.currentPassword))) throw invalidCredentials();
   const violations = checkPasswordPolicy(input.newPassword, user.email);

@@ -13,6 +13,9 @@ describe('garde-fous du seed', () => {
     expect(isLocalDatabaseUrl('postgresql://dz:dz@[::1]:5432/dz_dev')).toBe(true);
     expect(isLocalDatabaseUrl(REMOTE)).toBe(false);
     expect(isLocalDatabaseUrl('pas une url')).toBe(false);
+    // `?host=` overrides the URL host in pg/libpq: never considered local.
+    expect(isLocalDatabaseUrl('postgresql://u:p@localhost/db?host=prod.example.com')).toBe(false);
+    expect(isLocalDatabaseUrl('postgresql://u:p@localhost/db?hostaddr=10.0.0.5')).toBe(false);
   });
 
   it('refuse toujours en production, même en local', () => {
@@ -104,6 +107,17 @@ describe('garde-fous du seed', () => {
         }),
       ).toThrow(/SEED_STORE_HOSTS/u);
     }
+  });
+
+  it('le mot de passe de démo public est refusé hors local', () => {
+    expect(() =>
+      planSeed({
+        nodeEnv: 'development',
+        databaseUrl: REMOTE,
+        reset: false,
+        password: DEMO_PASSWORD,
+      }),
+    ).toThrow(/public demo password/u);
   });
 
   it('le mot de passe choisi respecte la politique des comptes', () => {

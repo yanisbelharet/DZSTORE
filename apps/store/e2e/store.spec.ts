@@ -132,6 +132,7 @@ test.describe('store — résolution par hôte, langues, en-têtes', () => {
       const response = await page.goto(storeUrl(host));
       expect(response?.status()).toBe(404);
       expect(response?.headers()['cache-control']).toBe('public, max-age=0, s-maxage=60');
+      expect(response?.headers()['x-content-type-options']).toBe('nosniff');
       await expect(page.getByRole('heading', { name: 'هذا المتجر غير موجود' })).toBeVisible();
       await expect(
         page.getByRole('heading', { name: 'Cette boutique n’existe pas' }),

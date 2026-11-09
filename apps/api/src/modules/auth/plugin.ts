@@ -34,11 +34,15 @@ export function registerAuthentication<L extends FastifyBaseLogger, P extends Fa
 
   app.addHook('onRequest', async (request) => {
     const bearer = bearerToken(request.headers.authorization);
+    // Decided on the MATCHED route, never on the raw URL: `/%761/users` reaches `/v1/users`.
+    // Every unsafe request without a Bearer token needs the header, except machine endpoints
+    // that carry their own secret (`/v1/internal/*`).
+    const route = request.routeOptions.url;
+    const machineEndpoint = route?.startsWith('/v1/internal/') === true;
     if (
       !SAFE_METHODS.has(request.method) &&
       bearer === undefined &&
-      request.url.startsWith('/v1/') &&
-      !request.url.startsWith('/v1/internal/') && // machine endpoints carry their own secret
+      !machineEndpoint &&
       request.headers[CSRF_HEADER] !== '1'
     ) {
       throw new AppError('CSRF_FAILED', 'Missing anti-CSRF header');

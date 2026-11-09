@@ -1,6 +1,7 @@
 import { parseEncryptionKeys } from '@dz/core/crypto';
 import type { KeyRing } from '@dz/core/crypto';
 import { baseEnvSchema, loadEnv } from '@dz/core/env';
+import { AppError } from '@dz/core/errors';
 import type { EnvSource, LOG_LEVELS } from '@dz/core/env';
 import { z } from 'zod';
 
@@ -34,8 +35,30 @@ export const apiEnvSchema = baseEnvSchema.extend({
   /** Origins allowed by CORS. Empty by default: the admin calls the API on its own origin. */
   CORS_ORIGINS: originList,
   BODY_LIMIT_BYTES: z.coerce.number().int().min(1024).max(10_485_760).default(262_144),
-  /** Trust X-Forwarded-* headers (behind Caddy, Cloudflare or Vercel). */
-  TRUST_PROXY: flag('false'),
+  /**
+   * Proxies trusted for X-Forwarded-*: `false` (direct), a number of hops (Vercel: 1;
+   * Cloudflare → Caddy: 2) or a comma-separated list of proxy addresses/CIDR. `true` trusts the
+   * client-controlled left-most X-Forwarded-For value: refused in production.
+   */
+  TRUST_PROXY: z
+    .string()
+    .default('false')
+    .transform((raw, ctx): boolean | number | string[] => {
+      const value = raw.trim();
+      if (value === 'false' || value === '') return false;
+      if (value === 'true') return true;
+      if (/^\d+$/u.test(value)) return Number(value);
+      const list = value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (list.every((item) => /^[0-9a-f.:/]+$/iu.test(item))) return list;
+      ctx.addIssue({
+        code: 'custom',
+        message: 'expected false, a hop count or a list of proxy IP/CIDR',
+      });
+      return z.NEVER;
+    }),
   /** `<version>:<base64 32 bytes>,…` — encrypts TOTP secrets and integration tokens (ADR-0009). */
   APP_ENCRYPTION_KEYS: z.string().min(1, { error: 'required, see .env.example' }),
   /** Secure session cookie (`__Host-` prefix). Only `false` for plain-http local setups. */
@@ -54,7 +77,8 @@ export interface ApiConfig {
   databaseUrl: string;
   corsOrigins: string[];
   bodyLimitBytes: number;
-  trustProxy: boolean;
+  /** Fastify `trustProxy`: hop count, address list, or boolean (true = trust everything). */
+  trustProxy: boolean | number | string[];
   /** OpenAPI document and Swagger UI are never published in production. */
   docsEnabled: boolean;
   encryptionKeys: KeyRing;
@@ -65,6 +89,24 @@ export interface ApiConfig {
 
 export function loadApiConfig(source: EnvSource = process.env): ApiConfig {
   const env = loadEnv(apiEnvSchema, source);
+  if (env.NODE_ENV === 'production' && env.TRUST_PROXY === true) {
+    throw new AppError(
+      'INVALID_CONFIGURATION',
+      'TRUST_PROXY=true is refused in production: set a hop count or proxy list',
+      {
+        details: { variables: ['TRUST_PROXY'] },
+      },
+    );
+  }
+  if (env.NODE_ENV === 'production' && !env.SESSION_COOKIE_SECURE) {
+    throw new AppError(
+      'INVALID_CONFIGURATION',
+      'SESSION_COOKIE_SECURE=false is refused in production',
+      {
+        details: { variables: ['SESSION_COOKIE_SECURE'] },
+      },
+    );
+  }
   return {
     nodeEnv: env.NODE_ENV,
     logLevel: env.LOG_LEVEL,

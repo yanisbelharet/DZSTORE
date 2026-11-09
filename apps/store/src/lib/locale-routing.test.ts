@@ -34,6 +34,18 @@ describe('routage par langue', () => {
     expect(routeLocale('/ar', arFirst)).toEqual({ kind: 'redirect', location: '/' });
   });
 
+  it('jamais de redirection vers un autre site (`//hote`)', () => {
+    expect(routeLocale('/ar//evil.com', arFirst)).toEqual({
+      kind: 'redirect',
+      location: '/evil.com',
+    });
+    expect(routeLocale('/fr//evil.com', arFirst)).toEqual({
+      kind: 'page',
+      locale: 'fr',
+      path: '/evil.com',
+    });
+  });
+
   it('une langue que la boutique ne propose pas n’est pas un préfixe (⇒ 404 de la page)', () => {
     expect(routeLocale('/ar/', frOnly)).toEqual({ kind: 'page', locale: 'fr', path: '/ar/' });
     expect(routeLocale('/en/', arFirst)).toEqual({ kind: 'page', locale: 'ar', path: '/en/' });

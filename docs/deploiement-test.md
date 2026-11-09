@@ -58,7 +58,7 @@ mots de passe.
    | `NODE_ENV` | `production` |
    | `DEPLOYMENT_ENVIRONMENT` | `test` |
    | `NODEJS_HELPERS` | `0` |
-   | `TRUST_PROXY` | `true` |
+   | `TRUST_PROXY` | `1` (un seul proxy de confiance : Vercel) |
    | `LOG_LEVEL` | `info` |
    | `APP_ENCRYPTION_KEYS` | (étape 2) |
    | `TICK_SECRET` | (étape 2) |

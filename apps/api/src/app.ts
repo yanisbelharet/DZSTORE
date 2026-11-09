@@ -69,6 +69,12 @@ export function createDefaultJobEngine({
   });
 }
 
+/** A hop count trusts the n proxies closest to the server (same rule as proxy-addr). */
+function fastifyTrustProxy(trust: ApiConfig['trustProxy']) {
+  if (typeof trust !== 'number') return trust;
+  return (_address: string, hop: number) => hop < trust;
+}
+
 export const API_VERSION = '0.1.0';
 
 /** Builds the HTTP application. Same app for the Node server and the serverless entry point. */
@@ -93,7 +99,7 @@ export async function buildApp({
     }),
     genReqId: (request) => requestIdFrom(request.headers['x-request-id']),
     bodyLimit: config.bodyLimitBytes,
-    trustProxy: config.trustProxy,
+    trustProxy: fastifyTrustProxy(config.trustProxy),
   }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);

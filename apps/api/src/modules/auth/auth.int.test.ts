@@ -168,6 +168,20 @@ describe('connexion', () => {
     });
     expect(logout.statusCode).toBe(403);
   });
+
+  it('un chemin encodé (/%761/…) atteint la route /v1 : l’en-tête reste exigé (BUG-003)', async () => {
+    const { server, ip } = await setup();
+    const user = await createUser(['CONFIRMATION_AGENT']);
+    const token = sessionCookie(await login(server, ip, { email: user.email }));
+    const encoded = await server.inject({
+      method: 'POST',
+      url: '/%761/auth/logout-all',
+      headers: { cookie: `${COOKIE}=${token}` },
+    });
+    expect(encoded.statusCode).toBe(403);
+    expect(errorOf(encoded).code).toBe('CSRF_FAILED');
+    expect((await get(server, '/v1/auth/me', token)).statusCode).toBe(200);
+  });
 });
 
 describe('sessions', () => {
@@ -175,7 +189,14 @@ describe('sessions', () => {
     const { server, ip } = await setup();
     const user = await createUser();
     const token = sessionCookie(await login(server, ip, { email: user.email }));
-    expect((await post(server, '/v1/auth/logout', token)).statusCode).toBe(204);
+    const logout = await post(server, '/v1/auth/logout', token);
+    expect(logout.statusCode).toBe(204);
+    // A `__Host-` cookie is only cleared by the browser with the same attributes (Secure…).
+    const cleared = String(logout.headers['set-cookie']);
+    expect(cleared).toMatch(/__Host-dz_session=;/u);
+    expect(cleared).toMatch(/Secure/u);
+    expect(cleared).toMatch(/HttpOnly/u);
+    expect(cleared).toMatch(/SameSite=Lax/u);
     expect((await get(server, '/v1/auth/me', token)).statusCode).toBe(401);
   });
 
@@ -366,6 +387,19 @@ describe('mot de passe', () => {
     expect(
       (await login(server, ip, { email: user.email, password: 'new correct horse' })).statusCode,
     ).toBe(200);
+  });
+
+  it('vérification du mot de passe actuel limitée (pas d’oracle pour une session volée)', async () => {
+    const { server, ip } = await setup();
+    const user = await createUser();
+    const token = sessionCookie(await login(server, ip, { email: user.email }));
+    const attempt = () =>
+      post(server, '/v1/auth/password', token, {
+        currentPassword: 'guess guess guess',
+        newPassword: 'new correct horse',
+      });
+    for (let i = 0; i < 5; i += 1) expect((await attempt()).statusCode).toBe(401);
+    expect((await attempt()).statusCode).toBe(429);
   });
 });
 

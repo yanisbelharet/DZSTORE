@@ -22,6 +22,8 @@ export const RATE_LIMITS = {
   loginByAccount: { name: 'login:account', limit: 10, windowMs: 15 * MINUTE },
   twoFactorBySession: { name: '2fa:session', limit: 5, windowMs: 5 * MINUTE },
   twoFactorByUser: { name: '2fa:user', limit: 10, windowMs: 15 * MINUTE },
+  /** Checking the current password must not become a password oracle for a stolen session. */
+  passwordChangeByUser: { name: 'password-change:user', limit: 5, windowMs: 15 * MINUTE },
 } as const satisfies Record<string, RateLimitRule>;
 
 /** Counts one hit for `identifier` (IP, e-mail, session…). Identifiers are stored hashed. */

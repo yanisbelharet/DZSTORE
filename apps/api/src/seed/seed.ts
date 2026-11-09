@@ -13,7 +13,10 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 /** A database on this machine (the only kind that may be reset or get public demo secrets). */
 export function isLocalDatabaseUrl(databaseUrl: string): boolean {
   try {
-    return LOCAL_HOSTS.has(new URL(databaseUrl).hostname);
+    const url = new URL(databaseUrl);
+    // libpq/pg let `?host=` (or `hostaddr`) override the URL host: never "local" then.
+    if (url.searchParams.has('host') || url.searchParams.has('hostaddr')) return false;
+    return LOCAL_HOSTS.has(url.hostname);
   } catch {
     return false;
   }
@@ -80,6 +83,9 @@ export function planSeed({
   if (reset && !local) throw refuse('reset is only allowed on a local database');
   if (!local && password === undefined) {
     throw refuse('SEED_DEMO_PASSWORD is required for a non-local database');
+  }
+  if (!local && password === DEMO_PASSWORD) {
+    throw refuse('the public demo password is only allowed on a local database');
   }
   const chosen = password ?? DEMO_PASSWORD;
   const violations = DEMO_USERS.flatMap((user) => checkPasswordPolicy(chosen, user.email));

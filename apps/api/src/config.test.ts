@@ -24,6 +24,25 @@ describe('configuration de l’API', () => {
     expect(config.encryptionKeys.size).toBe(1);
   });
 
+  it('confiance proxy : nombre de sauts ou liste d’adresses ; « true » refusé en production', () => {
+    expect(loadApiConfig({ ...base, TRUST_PROXY: '1' }).trustProxy).toBe(1);
+    expect(loadApiConfig({ ...base, TRUST_PROXY: '10.0.0.0/8, 127.0.0.1' }).trustProxy).toEqual([
+      '10.0.0.0/8',
+      '127.0.0.1',
+    ]);
+    expect(() => loadApiConfig({ ...base, TRUST_PROXY: 'n’importe quoi' })).toThrow(/TRUST_PROXY/u);
+    expect(() => loadApiConfig({ ...base, NODE_ENV: 'production', TRUST_PROXY: 'true' })).toThrow(
+      /TRUST_PROXY=true is refused in production/u,
+    );
+  });
+
+  it('refuse un cookie de session non sécurisé en production', () => {
+    expect(() =>
+      loadApiConfig({ ...base, NODE_ENV: 'production', SESSION_COOKIE_SECURE: 'false' }),
+    ).toThrow(/SESSION_COOKIE_SECURE=false is refused in production/u);
+    expect(loadApiConfig({ ...base, SESSION_COOKIE_SECURE: 'false' }).cookieSecure).toBe(false);
+  });
+
   it('lit la liste CORS, le port et la confiance proxy', () => {
     const config = loadApiConfig({
       ...base,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { AppError } from './errors.ts';
-import { createLogger, scrub } from './logger.ts';
+import { createLogger, scrub, scrubString } from './logger.ts';
 
 function capture() {
   const lines: Record<string, unknown>[] = [];
@@ -47,6 +47,39 @@ describe('logger — rédaction des données personnelles et secrets', () => {
     }
     expect(out).toContain('o-1');
     expect(out).toContain('SKU-1');
+  });
+
+  it('masque toute clé contenant token, secret, password, cookie… (en-têtes du projet compris)', () => {
+    const scrubbed = scrub({
+      'x-dz-service-token': 'abc',
+      'x-tick-secret': 'def',
+      storeServiceToken: 'ghi',
+      tickSecret: 'jkl',
+      recoveryCode: 'ABCDE-FGHIJ',
+      oldPasswordHash: 'x',
+      outboxEventId: '42',
+      queue: 'maintenance.purge-sessions',
+    });
+    expect(scrubbed).toEqual({
+      'x-dz-service-token': '[REDACTED]',
+      'x-tick-secret': '[REDACTED]',
+      storeServiceToken: '[REDACTED]',
+      tickSecret: '[REDACTED]',
+      recoveryCode: '[REDACTED]',
+      oldPasswordHash: '[REDACTED]',
+      outboxEventId: '42',
+      queue: 'maintenance.purge-sessions',
+    });
+  });
+
+  it('masque les identifiants inclus dans une URL, quel que soit le protocole', () => {
+    expect(scrubString('connect postgresql://dz_user:S3cret!@ep-x.neon.tech/db failed')).toBe(
+      'connect postgresql://[REDACTED]@ep-x.neon.tech/db failed',
+    );
+    expect(scrubString('https://user@example.com/path')).toBe(
+      'https://[REDACTED]@example.com/path',
+    );
+    expect(scrubString('https://example.com/path')).toBe('https://example.com/path');
   });
 
   it('masque les motifs sensibles dans les valeurs libres et le message', () => {
