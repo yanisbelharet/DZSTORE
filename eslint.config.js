@@ -147,6 +147,11 @@ export default defineConfig(
     rules: restrictImports(NO_DB, NO_DOMAIN),
   },
   {
+    // Pure geography reference (also bundled into storefront islands): no I/O, no server code.
+    files: ['packages/geo/**'],
+    rules: restrictImports(NO_DB, NO_DOMAIN, NO_IO_MODULES, NO_SERVER_CORE),
+  },
+  {
     files: ['packages/domain/**'],
     rules: {
       ...restrictImports(NO_DB, NO_IO_MODULES, NO_SERVER_CORE, NO_CORE_IDS),

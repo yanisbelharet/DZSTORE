@@ -90,6 +90,13 @@ describe('règles de dépendance entre packages', () => {
         'apps/store/src/x.ts',
         "import { createLogger } from '@dz/core/logger';\n" + use('createLogger'),
       ],
+      // Geography reference: pure and browser-safe.
+      ['packages/geo/src/x.ts', "import { dbPackage } from '@dz/db';\n" + use('dbPackage')],
+      ['packages/geo/src/x.ts', "import { readFileSync } from 'node:fs';\n" + use('readFileSync')],
+      [
+        'packages/geo/src/x.ts',
+        "import { createLogger } from '@dz/core/logger';\n" + use('createLogger'),
+      ],
       // Server part of the storefront: still no database nor business logic.
       ['apps/store/src/server/x.ts', "import { dbPackage } from '@dz/db';\n" + use('dbPackage')],
       [
@@ -138,6 +145,7 @@ describe('règles de dépendance entre packages', () => {
         'apps/api/src/x.ts',
         "import { createLogger } from '@dz/core/logger';\n" + use('createLogger'),
       ],
+      ['apps/store/src/x.ts', "import { matchKey } from '@dz/geo';\n" + use('matchKey')],
       // Server part of the storefront (middleware): configuration and logs.
       [
         'apps/store/src/server/x.ts',
