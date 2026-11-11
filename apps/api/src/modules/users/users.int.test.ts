@@ -142,6 +142,55 @@ describe('modification de comptes', () => {
     ).toBe(401);
   });
 
+  it('enregistrer le formulaire complet sans rien changer aux droits ne déconnecte pas (BUG-008)', async () => {
+    const agent = await signedInAs(testDb.db, ['CONFIRMATION_AGENT']);
+    await testDb.db.userStoreAccess.create({ data: { userId: agent.user.id, storeId: storeA } });
+    const res = await patch(owner.headers, agent.user.id, {
+      name: 'Nom corrigé',
+      roles: ['CONFIRMATION_AGENT'],
+      storeIds: [storeA],
+      locale: 'fr',
+      isActive: true,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(
+      (await app.inject({ method: 'GET', url: '/v1/auth/me', headers: agent.headers })).statusCode,
+    ).toBe(200);
+  });
+
+  it('son propre compte s’enregistre si les rôles envoyés sont inchangés', async () => {
+    const res = await patch(owner.headers, owner.user.id, {
+      name: 'Propriétaire',
+      roles: ['OWNER'],
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('deux OWNER qui se désactivent en même temps : il en reste toujours un actif', async () => {
+    const first = await signedInAs(testDb.db, ['OWNER']);
+    const second = await signedInAs(testDb.db, ['OWNER']);
+    // Leave only these two owners active.
+    await testDb.db.user.updateMany({
+      where: { roles: { has: 'OWNER' }, id: { notIn: [first.user.id, second.user.id] } },
+      data: { isActive: false },
+    });
+    const results = await Promise.all([
+      patch(first.headers, second.user.id, { isActive: false }),
+      patch(second.headers, first.user.id, { isActive: false }),
+    ]);
+    // One succeeds; the other is refused (409, or 401 if its session was revoked first).
+    const codes = results.map((r) => r.statusCode).sort();
+    expect(codes[0]).toBe(200);
+    expect([401, 409]).toContain(codes[1]);
+    expect(await testDb.db.user.count({ where: { roles: { has: 'OWNER' }, isActive: true } })).toBe(
+      1,
+    );
+    await testDb.db.user.updateMany({
+      where: { roles: { has: 'OWNER' } },
+      data: { isActive: true },
+    });
+  });
+
   it('ADMIN ne peut pas modifier un OWNER ni un autre ADMIN', async () => {
     const otherAdmin = await signedInAs(testDb.db, ['ADMIN']);
     expect((await patch(admin.headers, owner.user.id, { name: 'X Y' })).statusCode).toBe(403);

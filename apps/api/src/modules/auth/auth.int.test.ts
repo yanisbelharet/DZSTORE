@@ -129,13 +129,45 @@ describe('connexion', () => {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       await login(server, ip, { email: user.email, password: 'wrong password!' });
     }
-    expect((await login(server, ip, { email: user.email })).statusCode).toBe(401);
+    // Locked (and the per-account limit of 5 / 15 min is reached): refused either way.
+    expect((await login(server, ip, { email: user.email })).statusCode).not.toBe(200);
+    expect(
+      (await testDb.db.user.findUniqueOrThrow({ where: { id: user.id } })).lockedUntil,
+    ).not.toBeNull();
     clock.advance(16 * 60_000);
     expect((await login(server, ip, { email: user.email })).statusCode).toBe(200);
     const actions = await testDb.db.auditLog.findMany({ where: { entityId: user.id } });
     expect(actions.map((a) => a.action)).toEqual(
       expect.arrayContaining(['auth.login.failed', 'auth.account.locked', 'auth.login.succeeded']),
     );
+  });
+
+  it('échecs concurrents tous comptés (pas de perte par lecture-écriture)', async () => {
+    const { server } = await setup();
+    const user = await createUser();
+    await Promise.all(
+      Array.from({ length: 5 }, (_, i) =>
+        login(server, `10.77.${String(i)}.1`, { email: user.email, password: 'wrong password!' }),
+      ),
+    );
+    const row = await testDb.db.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(row.failedLoginCount).toBe(5);
+    expect(row.lockedUntil).not.toBeNull();
+  });
+
+  it('un compte protégé par 2FA n’est jamais verrouillé par des échecs de mot de passe', async () => {
+    const { server } = await setup();
+    const user = await createUser();
+    await testDb.db.user.update({ where: { id: user.id }, data: { totpEnabledAt: clock.now() } });
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await login(server, `10.78.${String(attempt)}.1`, {
+        email: user.email,
+        password: 'wrong password!',
+      });
+    }
+    expect(
+      (await testDb.db.user.findUniqueOrThrow({ where: { id: user.id } })).lockedUntil,
+    ).toBeNull();
   });
 
   it('limitation de débit par IP : 429 au-delà de 20 tentatives / 15 min', async () => {
@@ -209,16 +241,21 @@ describe('sessions', () => {
     expect((await get(server, '/v1/auth/me', second)).statusCode).toBe(401);
   });
 
-  it('expiration après 12 h d’inactivité ; « se souvenir » prolonge à 7 jours', async () => {
+  it('expiration après 12 h d’inactivité ; « se souvenir » (7 jours) réservé à l’OWNER', async () => {
     const { server, ip } = await setup();
-    const user = await createUser();
-    const normal = sessionCookie(await login(server, ip, { email: user.email }));
-    const remembered = sessionCookie(
-      await login(server, ip, { email: user.email, remember: true }),
+    const agent = await createUser();
+    const owner = await createUser(['OWNER']);
+    const normal = sessionCookie(await login(server, ip, { email: agent.email }));
+    const agentRemembered = sessionCookie(
+      await login(server, ip, { email: agent.email, remember: true }),
+    );
+    const ownerRemembered = sessionCookie(
+      await login(server, ip, { email: owner.email, remember: true }),
     );
     clock.advance(12 * 3_600_000 + 60_000);
     expect((await get(server, '/v1/auth/me', normal)).statusCode).toBe(401);
-    expect((await get(server, '/v1/auth/me', remembered)).statusCode).toBe(200);
+    expect((await get(server, '/v1/auth/me', agentRemembered)).statusCode).toBe(401);
+    expect((await get(server, '/v1/auth/me', ownerRemembered)).statusCode).toBe(200);
   });
 
   it('l’activité fait glisser l’expiration, dans la limite absolue de 30 jours', async () => {
@@ -280,6 +317,31 @@ describe('double authentification (TOTP)', () => {
       recoveryCodes: enable.json<{ recoveryCodes: string[] }>().recoveryCodes,
     };
   }
+
+  it('20 codes faux consécutifs : compte verrouillé, sessions révoquées, alerte d’audit', async () => {
+    const { server, ip } = await setup();
+    const { admin } = await enrolledAdmin(server, ip);
+    let token = sessionCookie(await login(server, ip, { email: admin.email }));
+    for (let failure = 1; failure <= 20; failure += 1) {
+      if (failure % 5 === 0) clock.advance(16 * 60_000); // stay under the rate limits
+      const res = await post(server, '/v1/auth/2fa/verify', token, { code: '000000' });
+      expect(res.statusCode).toBe(401);
+      if (failure % 4 === 0 && failure < 20) {
+        token = sessionCookie(
+          await login(server, `10.79.${String(failure)}.1`, { email: admin.email }),
+        );
+      }
+    }
+    const row = await testDb.db.user.findUniqueOrThrow({ where: { id: admin.id } });
+    expect(row.lockedUntil).not.toBeNull();
+    expect(row.failedTwoFactorCount).toBe(0);
+    expect((await get(server, '/v1/auth/me', token)).statusCode).toBe(401);
+    expect((await login(server, '10.79.99.1', { email: admin.email })).statusCode).toBe(401);
+    const alert = await testDb.db.auditLog.count({
+      where: { entityId: admin.id, action: 'auth.2fa.locked' },
+    });
+    expect(alert).toBe(1);
+  });
 
   it('ADMIN : enrôlement obligatoire avant tout accès, puis codes de secours', async () => {
     const { server, ip } = await setup();

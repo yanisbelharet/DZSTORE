@@ -21,6 +21,26 @@
 - **Test de régression** : —
 
 ## Résolus
+### BUG-008 — Enregistrer un utilisateur dans l'admin le déconnectait toujours
+- **Date** : 2026-11-11 · **Sévérité** : S2 · **Statut** : corrigé
+- **Symptôme** : tout enregistrement (même un renommage) révoquait les sessions de la cible ;
+  modifier son propre compte renvoyait 403.
+- **Cause racine** : le formulaire envoie tous les champs ; le service traitait leur présence
+  comme un changement de droits.
+- **Correctif** : seules les vraies modifications comptent (rôles, boutiques, désactivation).
+- **Test de régression** : `apps/api/src/modules/users/users.int.test.ts` (« formulaire complet »).
+
+### BUG-009 — Authentification : compteurs non atomiques, 2FA sans plafond, dernier OWNER
+- **Date** : 2026-11-11 · **Sévérité** : S1 (sécurité) · **Statut** : corrigé
+- **Symptômes** : échecs de connexion simultanés perdus (verrouillage contourné) ; codes 2FA
+  devinables sans limite totale ; deux OWNER pouvaient se désactiver mutuellement ; écritures de
+  sécurité (changement, révocation, audit) non atomiques ; « se souvenir » 7 j pour tous.
+- **Correctif** : incrément SQL atomique avec oubli après 24 h ; pas de verrouillage par mot de
+  passe pour un compte 2FA ; 20 échecs 2FA ⇒ verrouillage 24 h + sessions révoquées + alerte
+  d'audit ; verrou transactionnel sur les OWNER ; transactions uniques ; 7 j réservés à l'OWNER ;
+  5 connexions / 15 min par compte (ARCHITECTURE §6).
+- **Tests** : `auth.int.test.ts`, `users.int.test.ts`. **Données affectées** : aucune.
+
 ### BUG-003 — Anti-CSRF contourné par un chemin encodé (`/%761/…`)
 - **Date** : 2026-11-09 · **Sévérité** : S1 (sécurité) · **Statut** : corrigé
 - **Symptôme** : `POST /%761/users/<id>/reset-2fa` atteignait la route `/v1/…` (le routeur

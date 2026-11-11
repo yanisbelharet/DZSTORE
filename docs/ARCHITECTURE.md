@@ -278,6 +278,7 @@ erDiagram
 | `OrderItem` | `CHECK (quantity > 0 AND "unitPrice" >= 0 AND "lineTotal" = quantity * "unitPrice")` |
 | Recherche | index trigramme (`pg_trgm`) sur `Order.customerName` ; recherche téléphone par préfixe normalisé |
 | Limitation de débit | table `UNLOGGED rate_limit_bucket` gérée en SQL brut |
+| `User` | `CHECK ("failedTwoFactorCount" >= 0)` (compteur d'échecs 2FA, verrouillage au plafond) |
 
 ### Index : justification des principaux
 - `Order(storeId, status, createdAt)` : liste OMS filtrée par statut, triée par date.

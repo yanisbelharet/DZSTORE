@@ -30,7 +30,15 @@ export interface RequestInfo {
   userAgent: string | undefined;
 }
 
-const LOCKOUT = { threshold: 5, baseMs: 15 * 60_000, maxMs: 24 * 60 * 60_000 } as const;
+const LOCKOUT = {
+  threshold: 5,
+  baseMs: 15 * 60_000,
+  maxMs: 24 * 60 * 60_000,
+  /** Failures older than this no longer count (an attacker cannot keep an account locked forever). */
+  decayMs: 24 * 60 * 60_000,
+} as const;
+/** Consecutive second-factor failures before the account is locked and its sessions revoked. */
+const TWO_FACTOR_LOCK = { threshold: 20, lockMs: 24 * 60 * 60_000 } as const;
 
 const invalidCredentials = () =>
   new AppError('INVALID_CREDENTIALS', 'Invalid credentials or account temporarily locked');
@@ -91,18 +99,27 @@ export async function login(deps: AuthDependencies, input: LoginInput) {
   }
 
   if (!(await verifyPassword(user.passwordHash, input.password))) {
-    const failures = user.failedLoginCount + 1;
+    // Atomic increment: concurrent failures are all counted (no read-modify-write).
+    const decayedBefore = new Date(now.getTime() - LOCKOUT.decayMs);
+    const [counted] = await db.$queryRaw<{ failures: number }[]>`
+      UPDATE "User" SET
+        "failedLoginCount" = CASE
+          WHEN "lastFailedLoginAt" IS NULL OR "lastFailedLoginAt" < ${decayedBefore}::timestamptz THEN 1
+          ELSE "failedLoginCount" + 1 END,
+        "lastFailedLoginAt" = ${now}::timestamptz
+      WHERE "id" = ${user.id}::uuid
+      RETURNING "failedLoginCount" AS failures`;
+    const failures = counted?.failures ?? 1;
+    // Accounts protected by a second factor are never hard-locked by password failures: a
+    // password alone cannot open them, and a lock would let anyone deny access to the OWNER.
     const lockedUntil =
-      failures >= LOCKOUT.threshold
+      failures >= LOCKOUT.threshold && user.totpEnabledAt === null
         ? new Date(
             now.getTime() +
               Math.min(LOCKOUT.baseMs * 2 ** (failures - LOCKOUT.threshold), LOCKOUT.maxMs),
           )
         : null;
-    await db.user.update({
-      where: { id: user.id },
-      data: { failedLoginCount: failures, lockedUntil },
-    });
+    if (lockedUntil) await db.user.update({ where: { id: user.id }, data: { lockedUntil } });
     await recordAudit(db, {
       ...audit,
       action: lockedUntil ? 'auth.account.locked' : 'auth.login.failed',
@@ -114,13 +131,14 @@ export async function login(deps: AuthDependencies, input: LoginInput) {
 
   await db.user.update({
     where: { id: user.id },
-    data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: now },
+    data: { failedLoginCount: 0, lastFailedLoginAt: null, lockedUntil: null, lastLoginAt: now },
   });
   const secondFactorPending = requiresTwoFactor(user.roles) || user.totpEnabledAt !== null;
   const created = await createSession(db, clock, {
     userId: user.id,
     kind: input.kind,
-    remembered: input.remember,
+    // « Se souvenir » (7 days of inactivity) is for the OWNER only; others keep 12 h.
+    remembered: input.remember && user.roles.includes('OWNER'),
     twoFactorVerified: !secondFactorPending,
     ip: input.ip,
     userAgent: input.userAgent,
@@ -237,16 +255,48 @@ export async function verifySecondFactor(
     accepted = consumed === 1;
   }
 
+  if (!accepted) {
+    const [counted] = await db.$queryRaw<{ failures: number }[]>`
+      UPDATE "User" SET "failedTwoFactorCount" = "failedTwoFactorCount" + 1
+      WHERE "id" = ${user.id}::uuid
+      RETURNING "failedTwoFactorCount" AS failures`;
+    const failures = counted?.failures ?? 1;
+    const locked = failures >= TWO_FACTOR_LOCK.threshold;
+    await db.$transaction(async (tx) => {
+      if (locked) {
+        // Someone holds the password and is guessing codes: lock, close every session, alert.
+        await tx.user.update({
+          where: { id: user.id },
+          data: {
+            lockedUntil: new Date(clock.now().getTime() + TWO_FACTOR_LOCK.lockMs),
+            failedTwoFactorCount: 0,
+          },
+        });
+        await revokeUserSessions(tx, clock, user.id);
+      }
+      await recordAudit(tx, {
+        actorType: 'USER',
+        actorUserId: user.id,
+        action: locked ? 'auth.2fa.locked' : 'auth.2fa.failed',
+        entityType: 'User',
+        entityId: user.id,
+        meta: { method, failures },
+      });
+    });
+    throw new AppError('INVALID_TWO_FACTOR_CODE', 'Invalid two-factor code');
+  }
+  await db.$transaction([
+    db.session.update({ where: { id: sessionId }, data: { twoFactorVerified: true } }),
+    db.user.update({ where: { id: user.id }, data: { failedTwoFactorCount: 0 } }),
+  ]);
   await recordAudit(db, {
     actorType: 'USER',
     actorUserId: user.id,
-    action: accepted ? 'auth.2fa.verified' : 'auth.2fa.failed',
+    action: 'auth.2fa.verified',
     entityType: 'User',
     entityId: user.id,
     meta: { method },
   });
-  if (!accepted) throw new AppError('INVALID_TWO_FACTOR_CODE', 'Invalid two-factor code');
-  await db.session.update({ where: { id: sessionId }, data: { twoFactorVerified: true } });
 }
 
 /** Changes the password and revokes every other session of the user. */
@@ -266,17 +316,17 @@ export async function changePassword(
       details: { violations },
     });
   }
-  await db.user.update({
-    where: { id: user.id },
-    data: { passwordHash: await hashPassword(input.newPassword) },
-  });
-  const revoked = await revokeUserSessions(db, clock, user.id, { except: sessionId });
-  await recordAudit(db, {
-    actorType: 'USER',
-    actorUserId: user.id,
-    action: 'auth.password.changed',
-    entityType: 'User',
-    entityId: user.id,
-    meta: { revokedSessions: revoked },
+  const passwordHash = await hashPassword(input.newPassword);
+  await db.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: user.id }, data: { passwordHash } });
+    const revoked = await revokeUserSessions(tx, clock, user.id, { except: sessionId });
+    await recordAudit(tx, {
+      actorType: 'USER',
+      actorUserId: user.id,
+      action: 'auth.password.changed',
+      entityType: 'User',
+      entityId: user.id,
+      meta: { revokedSessions: revoked },
+    });
   });
 }

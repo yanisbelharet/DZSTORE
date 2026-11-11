@@ -19,7 +19,7 @@ const MINUTE = 60_000;
 
 export const RATE_LIMITS = {
   loginByIp: { name: 'login:ip', limit: 20, windowMs: 15 * MINUTE },
-  loginByAccount: { name: 'login:account', limit: 10, windowMs: 15 * MINUTE },
+  loginByAccount: { name: 'login:account', limit: 5, windowMs: 15 * MINUTE },
   twoFactorBySession: { name: '2fa:session', limit: 5, windowMs: 5 * MINUTE },
   twoFactorByUser: { name: '2fa:user', limit: 10, windowMs: 15 * MINUTE },
   /** Checking the current password must not become a password oracle for a stolen session. */

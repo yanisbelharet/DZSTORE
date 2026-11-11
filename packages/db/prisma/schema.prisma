@@ -115,22 +115,24 @@ model AppSetting {
 // ───────────────────────── Identité & sécurité ─────────────────────────
 
 model User {
-  id               String    @id @default(uuid(7)) @db.Uuid
-  email            String    @unique // stocké en minuscules
-  name             String
-  passwordHash     String // Argon2id
-  roles            Role[]
-  locale           Locale    @default(fr)
-  isActive         Boolean   @default(true)
-  totpSecretId     String?   @unique @db.Uuid
-  totpEnabledAt    DateTime? @db.Timestamptz(3)
-  totpLastUsedStep Int? // anti-rejeu : dernier pas de temps TOTP accepté
-  recoveryCodes    String[] // hachés (SHA-256), à usage unique
-  failedLoginCount Int       @default(0)
-  lockedUntil      DateTime? @db.Timestamptz(3)
-  lastLoginAt      DateTime? @db.Timestamptz(3)
-  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime  @updatedAt @db.Timestamptz(3)
+  id                   String    @id @default(uuid(7)) @db.Uuid
+  email                String    @unique // stocké en minuscules
+  name                 String
+  passwordHash         String // Argon2id
+  roles                Role[]
+  locale               Locale    @default(fr)
+  isActive             Boolean   @default(true)
+  totpSecretId         String?   @unique @db.Uuid
+  totpEnabledAt        DateTime? @db.Timestamptz(3)
+  totpLastUsedStep     Int? // anti-rejeu : dernier pas de temps TOTP accepté
+  recoveryCodes        String[] // hachés (SHA-256), à usage unique
+  failedLoginCount     Int       @default(0)
+  lastFailedLoginAt    DateTime? @db.Timestamptz(3) // les échecs anciens (> 24 h) ne comptent plus
+  failedTwoFactorCount Int       @default(0) // échecs 2FA consécutifs ; plafond ⇒ verrouillage
+  lockedUntil          DateTime? @db.Timestamptz(3)
+  lastLoginAt          DateTime? @db.Timestamptz(3)
+  createdAt            DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime  @updatedAt @db.Timestamptz(3)
 
   totpSecret  Secret?           @relation("UserTotpSecret", fields: [totpSecretId], references: [id])
   storeAccess UserStoreAccess[]

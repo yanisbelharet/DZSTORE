@@ -129,57 +129,69 @@ export async function updateUser(
 ) {
   const { db, clock } = deps;
   const target = await manageableTarget(deps, actor, userId);
-  if (input.roles && !canAssignRoles(actor.roles, input.roles)) {
+  // Only real changes count: the admin form sends every field on each save (BUG-008).
+  const sameSet = (a: readonly string[], b: readonly string[]) =>
+    a.length === b.length && [...a].sort().join() === [...b].sort().join();
+  const rolesChanged = input.roles !== undefined && !sameSet(input.roles, target.roles);
+  const storesChanged =
+    input.storeIds !== undefined &&
+    !sameSet(
+      input.storeIds,
+      target.storeAccess.map((access) => access.storeId),
+    );
+  const deactivated = input.isActive === false && target.isActive;
+  if (rolesChanged && input.roles && !canAssignRoles(actor.roles, input.roles)) {
     throw new AppError('FORBIDDEN', 'You cannot grant these roles');
   }
-  if (userId === actor.userId && (input.isActive === false || input.roles !== undefined)) {
+  if (userId === actor.userId && (deactivated || rolesChanged)) {
     throw new AppError('FORBIDDEN', 'You cannot change your own roles or deactivate yourself');
   }
   const losesOwner =
+    target.isActive &&
     target.roles.includes('OWNER') &&
-    ((input.roles !== undefined && !input.roles.includes('OWNER')) || input.isActive === false);
-  if (losesOwner) {
-    const owners = await db.user.count({ where: { roles: { has: 'OWNER' }, isActive: true } });
-    if (owners <= 1) throw new AppError('CONFLICT', 'The last active owner cannot be removed');
-  }
-  if (input.storeIds) await assertStoresExist(db, input.storeIds);
+    ((rolesChanged && input.roles !== undefined && !input.roles.includes('OWNER')) || deactivated);
+  if (storesChanged && input.storeIds) await assertStoresExist(db, input.storeIds);
+  const privilegesChanged = rolesChanged || deactivated || storesChanged;
 
+  // One transaction: change, session revocation and audit succeed or fail together.
   const updated = await db.$transaction(async (tx) => {
-    if (input.storeIds) {
+    if (losesOwner) {
+      // Serialises concurrent owner changes (transaction-level lock: safe behind PgBouncer).
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('dz:owners'))`;
+      const others = await tx.user.count({
+        where: { roles: { has: 'OWNER' }, isActive: true, id: { not: userId } },
+      });
+      if (others === 0) throw new AppError('CONFLICT', 'The last active owner cannot be removed');
+    }
+    if (storesChanged && input.storeIds) {
       await tx.userStoreAccess.deleteMany({ where: { userId } });
       await tx.userStoreAccess.createMany({
         data: input.storeIds.map((storeId) => ({ userId, storeId })),
       });
     }
-    return tx.user.update({
+    const user = await tx.user.update({
       where: { id: userId },
       data: {
         ...(input.name === undefined ? {} : { name: input.name }),
-        ...(input.roles === undefined ? {} : { roles: input.roles }),
+        ...(rolesChanged && input.roles ? { roles: input.roles } : {}),
         ...(input.locale === undefined ? {} : { locale: input.locale }),
         ...(input.isActive === undefined ? {} : { isActive: input.isActive }),
       },
       include: withAccess,
     });
-  });
-
-  // Privileges or access changed: existing sessions must not keep the old rights.
-  const privilegesChanged =
-    (input.roles !== undefined &&
-      [...input.roles].sort().join() !== [...target.roles].sort().join()) ||
-    input.isActive === false ||
-    input.storeIds !== undefined;
-  if (privilegesChanged) await revokeUserSessions(db, clock, userId);
-
-  await recordAudit(db, {
-    actorType: 'USER',
-    actorUserId: actor.userId,
-    action: 'user.updated',
-    entityType: 'User',
-    entityId: userId,
-    before: snapshot(target),
-    after: snapshot(updated),
-    meta: { sessionsRevoked: privilegesChanged },
+    // Privileges or access changed: existing sessions must not keep the old rights.
+    if (privilegesChanged) await revokeUserSessions(tx, clock, userId);
+    await recordAudit(tx, {
+      actorType: 'USER',
+      actorUserId: actor.userId,
+      action: 'user.updated',
+      entityType: 'User',
+      entityId: userId,
+      before: snapshot(target),
+      after: snapshot(user),
+      meta: { sessionsRevoked: privilegesChanged },
+    });
+    return user;
   });
   return toUserDto(updated);
 }
@@ -195,21 +207,20 @@ export async function resetPassword(
   }
   const target = await manageableTarget(deps, actor, userId);
   assertPasswordPolicy(newPassword, target.email);
-  await deps.db.user.update({
-    where: { id: userId },
-    data: {
-      passwordHash: await hashPassword(newPassword),
-      failedLoginCount: 0,
-      lockedUntil: null,
-    },
-  });
-  await revokeUserSessions(deps.db, deps.clock, userId);
-  await recordAudit(deps.db, {
-    actorType: 'USER',
-    actorUserId: actor.userId,
-    action: 'user.password.reset',
-    entityType: 'User',
-    entityId: userId,
+  const passwordHash = await hashPassword(newPassword);
+  await deps.db.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: { passwordHash, failedLoginCount: 0, lastFailedLoginAt: null, lockedUntil: null },
+    });
+    await revokeUserSessions(tx, deps.clock, userId);
+    await recordAudit(tx, {
+      actorType: 'USER',
+      actorUserId: actor.userId,
+      action: 'user.password.reset',
+      entityType: 'User',
+      entityId: userId,
+    });
   });
 }
 
@@ -223,14 +234,14 @@ export async function resetTwoFactor(deps: UsersDependencies, actor: AuthContext
       data: { totpEnabledAt: null, totpLastUsedStep: null, recoveryCodes: [], totpSecretId: null },
     });
     if (target.totpSecretId) await tx.secret.delete({ where: { id: target.totpSecretId } });
-  });
-  await revokeUserSessions(deps.db, deps.clock, userId);
-  await recordAudit(deps.db, {
-    actorType: 'USER',
-    actorUserId: actor.userId,
-    action: 'user.2fa.reset',
-    entityType: 'User',
-    entityId: userId,
+    await revokeUserSessions(tx, deps.clock, userId);
+    await recordAudit(tx, {
+      actorType: 'USER',
+      actorUserId: actor.userId,
+      action: 'user.2fa.reset',
+      entityType: 'User',
+      entityId: userId,
+    });
   });
 }
 
