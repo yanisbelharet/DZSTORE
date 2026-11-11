@@ -229,7 +229,7 @@
   propriétés de paramètres) ; le typecheck reste la barrière de typage ; esbuild retiré.
 
 ## ADR-0023 — File de jobs maison sur PostgreSQL (remplace pg-boss dans ADR-0006)
-**Statut** : Acceptée (2026-11-02, P0-08) — à confirmer par le propriétaire au checkpoint 0.
+**Statut** : Acceptée (2026-11-02, P0-08) — confirmée au checkpoint 0 (2026-11-11, choix délégués par le propriétaire).
 L'outbox transactionnelle d'ADR-0006 est conservée ; seul le moteur de file change.
 - **Contexte** : il faut des effets externes fiables (transporteur, CAPI, IA), un mode « tick »
   serverless (ADR-0020), une sérialisation par compte transporteur et une file d'échecs

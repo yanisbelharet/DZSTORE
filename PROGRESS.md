@@ -10,7 +10,7 @@
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : Checkpoint 0 (`/checkpoint`), puis Phase 1. Déploiement réel de P0-12
+- **Prochaine action** : Phase 1 — `/tache P1-01` (référentiel géo : 69 wilayas, loi n° 26-06). Déploiement réel de P0-12
   dès que le propriétaire fournit un jeton Vercel et une clé Neon (formulaire sécurisé depuis
   claude.ai sur ordinateur — l'app mobile ne l'affiche pas) ou suit `docs/deploiement-test.md`.
 
@@ -27,7 +27,7 @@
 10. ~~P0-10 — Store : coquille (résolution par hôte, ar RTL / fr, budgets Lighthouse)~~ ✅
 11. ~~P0-11 — Seed déterministe et fabriques de test~~ ✅
 12. ~~P0-12 — Déploiement de test sur Vercel + Neon~~ ✅ préparé et vérifié hors ligne ; mise en ligne en attente des comptes
-13. Checkpoint 0 (`/checkpoint`, tag `cp-0`)
+13. ~~Checkpoint 0 (`/checkpoint`, tag `cp-0`)~~ ✅ (2026-11-11)
 
 ## Terminé
 | Date | Élément | Commit |
@@ -60,7 +60,27 @@
   ou API publique ; le propriétaire peut demander d'« enchaîner » à tout moment.
 
 ## À valider par le propriétaire
-- **ADR-0023** : file de jobs maison sur PostgreSQL au lieu de pg-boss (à confirmer au checkpoint 0).
+- Déploiement de test : fournir un jeton Vercel et une clé Neon (claude.ai sur ordinateur) ou
+  suivre `docs/deploiement-test.md`.
+
+## Checkpoint 0 (2026-11-11, tag `cp-0`)
+- ✅ install/lint/typecheck/tests (365) /build verts ; CI verte (runs 13–14 lus ; GitHub MCP
+  ensuite indisponible) ; e2e admin 3/3, store 26/26 dont budgets Lighthouse.
+- ✅ `pnpm dev` lance API, worker, admin et store ; connexion OWNER + 2FA dans l'admin seedé.
+- ✅ Matrice RBAC testée ; outbox → job → retries → DLQ → relance testés.
+- ✅ Deux boutiques par hôte, ar RTL et fr ; Lighthouse mobile 0,99–1.
+- ❌ Environnement Vercel + Neon **en ligne** : prêt et vérifié hors ligne, en attente des comptes.
+- ✅ Aucun secret dans le dépôt ; logs d'une session complète sans donnée personnelle.
+- ✅ PROGRESS, CLAUDE.md, ARCHITECTURE, DECISIONS (ADR-0024/0025, ADR-0020 aligné, ADR-0023 confirmé).
+- Revue par 3 subagents : 10 correctifs (BUG-003 à BUG-010 + durcissements).
+- **Dettes acceptées** : 3 requêtes SQL par requête authentifiée (jointure à faire) ; DTO de
+  l'admin non validés par Zod (déplacer dans `@dz/contracts`) ; palette de commandes à charger à
+  la demande ; codes de secours en SHA-256 sans clé serveur (HMAC) ; journal d'audit append-only
+  par convention (trigger à ajouter) ; limite de débit par compte = vecteur de déni de service
+  (accepté : 2FA, pas de verrouillage dur des comptes 2FA) ; e2e admin sur serveur de dev (pas
+  sur le build) ; `originList` dupliqué API/store ; constantes `*Package` du squelette.
+- **Phase 1** : le référentiel géo suit le découpage en vigueur (69 wilayas, 1541 communes, loi
+  n° 26-06 du 4 avril 2026, JORA n° 25) au lieu des 58 du PRD ; noms ar/fr depuis Wikidata (CC0).
 
 ## Pièges et notes techniques
 - Le serveur MCP GitHub ne s'est pas connecté dans la session 1 ; `git push` fonctionne.
