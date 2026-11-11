@@ -83,5 +83,51 @@
     "Q12697618": "Doublon sans nom arabe de Menaâ / Ouled Atia (Q3358191)",
     "Q28220904": "Hammam Ouled Ali : localité, pas une commune (Guelma compte 34 communes)",
     "Q3148138": "Ighzer Amokrane : agglomération de la commune d'Ouzellaguen, pas une commune (Béjaïa compte 52 communes)"
+  },
+  "renames": {
+    "Q3358191": {
+      "ar": "مناعة",
+      "former": [
+        {
+          "lang": "fr",
+          "name": "Ouled Atia"
+        },
+        {
+          "lang": "ar",
+          "name": "أولاد عطية"
+        }
+      ],
+      "toVerify": "Nom arabe « مناعة » repris du titre d'article ar.wikipedia, à confirmer par l'édition arabe du JORA n° 25 (2026)",
+      "source": "Loi 26-06 (JORA 2026 n° 25, art. 52 bis 19) : Menaâ, anciennement Ouled Atia (fr.wikipedia « Menaâ »)"
+    },
+    "Q3530064": {
+      "former": [
+        {
+          "lang": "fr",
+          "name": "Tlatet Eddouar"
+        },
+        {
+          "lang": "fr",
+          "name": "Tléta des Douairs"
+        }
+      ],
+      "toVerify": "Nouveau nom arabe d'« Eddouair » inconnu : ثلاثة الدوائر (ancien nom) conservé, à confirmer par l'édition arabe du JORA n° 25 (2026)",
+      "source": "Loi 26-06 (JORA 2026 n° 25, art. 30) : Eddouair = Tlatet Eddouar"
+    }
+  },
+  "variants": {
+    "Q3196167": [
+      {
+        "lang": "fr",
+        "name": "Kheraza"
+      },
+      {
+        "lang": "fr",
+        "name": "Khezaras"
+      }
+    ]
+  },
+  "toVerify": {
+    "Q2413817": "Rattachement litigieux : JO 2019 (loi 19-12, art. 52 bis 6) ⇒ Touggourt (55) ; fr.wikipedia donne 8 communes à Ouargla et 13 à Touggourt. À trancher avec la liste des communes EcoTrack (phase 3)."
   }
 }

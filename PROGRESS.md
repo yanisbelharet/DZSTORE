@@ -10,7 +10,7 @@
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : Phase 1 — `/tache P1-02` (boutiques et domaines : administration). Déploiement réel de P0-12
+- **Prochaine action** : plan de P1-02 et correspondance phase 1 soumis au propriétaire ; ADR-0027 (worker : VPS ou Fly/Railway) en attente de son choix. Déploiement réel de P0-12
   dès que le propriétaire fournit un jeton Vercel et une clé Neon (formulaire sécurisé depuis
   claude.ai sur ordinateur — l'app mobile ne l'affiche pas) ou suit `docs/deploiement-test.md`.
 
@@ -32,6 +32,7 @@
 ## Terminé
 | Date | Élément | Commit |
 |---|---|---|
+| 2026-11-11 | **P1-01b** — Codes 59–69 confirmés par le décret 26-206 (JO n° 40, vérifié sur PDF) et figés par un test ; `legacyWilayaCode` sur chaque commune ; anciens noms et variantes (`GeoAlias` ar/fr : Ouled Atia → Menaâ, Tlatet Eddouar → Eddouair, Khezarra/Kheraza) ; `toVerify` (El Borma, Menaâ/Eddouair en arabe) ; moteur `matchName` (exact/normalisé/approché + confiance) ; migration `geo_aliases_legacy` ; ADR-0026 ; ADR-0027 (hébergement du worker) **proposé, choix du propriétaire attendu** | voir `git log` |
 | 2026-11-11 | **P1-01** — Référentiel géo `@dz/geo` : 69 wilayas / 1541 communes (loi n° 26-06, JORA n° 25 du 5 avril 2026, et loi 19-12) ; listes officielles extraites des PDF du JORA (effectifs vérifiés), noms arabes Wikidata (CC0), 47 rapprochements approchés et 16 corrections justifiées (`sources/overrides.json`), identifiants stables (numéro Wikidata) ; normalisation ar/latin + Jaro-Winkler ; tables `Wilaya`/`Commune`, `pnpm db:geo` (idempotent, non destructif), `GET /v1/geo/…` en cache ; `SOURCE.md` | voir `git log` |
 | 2026-11-09 | **P0-12** — Environnement de test prêt : API assemblée en un fichier par Vite pour Vercel (migrations directes + seed à la demande + bundle ; vérifié avec `vercel build` hors ligne : fonction `nodejs24.x`, Argon2 embarqué, et bundle servi réellement contre PostgreSQL), `vercel.json` des 3 projets, domaines `*.vercel.app` par boutique (seed `SEED_STORE_HOSTS`), marqueur `DEPLOYMENT_ENVIRONMENT=test` (mention + `noindex` store/admin), page admin « Système » (tour de traitement + événement de test traité via l'outbox, e2e), guide `docs/deploiement-test.md`, ADR-0025, BUG-002 corrigé | voir `git log` |
 | 2026-11-03 | **P0-11** — `pnpm db:seed` : 2 boutiques (`beaute.localhost`, `maison.localhost`) et 6 comptes (un par rôle + agent mixte), idempotent (2e exécution : rien ne change, pas même `updatedAt` — prouvé par mutation), répare les données de démo sans toucher au reste ; refus en production ; `--reset` réservé aux bases locales ; mot de passe et 2FA de démo publics **uniquement** en local, `SEED_DEMO_PASSWORD` exigé ailleurs ; connexion OWNER + TOTP de démo testée ; fabriques `createFactories` (`@dz/db/testing`) ; README « Données de démo » | voir `git log` |
@@ -74,8 +75,8 @@
 - ✅ Aucun secret dans le dépôt ; logs d'une session complète sans donnée personnelle.
 - ✅ PROGRESS, CLAUDE.md, ARCHITECTURE, DECISIONS (ADR-0024/0025, ADR-0020 aligné, ADR-0023 confirmé).
 - Revue par 3 subagents : 10 correctifs (BUG-003 à BUG-010 + durcissements).
-- **Dettes acceptées** : 3 requêtes SQL par requête authentifiée (jointure à faire) ; DTO de
-  l'admin non validés par Zod (déplacer dans `@dz/contracts`) ; palette de commandes à charger à
+- **Dettes acceptées** : 3 requêtes SQL par requête authentifiée (reporté en phase 10 sauf
+  lenteur mesurée) ; DTO de l'admin non validés par Zod (**tâche P1-07, avant la phase 2**) ; palette de commandes à charger à
   la demande ; codes de secours en SHA-256 sans clé serveur (HMAC) ; journal d'audit append-only
   par convention (trigger à ajouter) ; limite de débit par compte = vecteur de déni de service
   (accepté : 2FA, pas de verrouillage dur des comptes 2FA) ; e2e admin sur serveur de dev (pas

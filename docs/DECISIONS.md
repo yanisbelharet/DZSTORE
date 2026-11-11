@@ -304,3 +304,51 @@ L'outbox transactionnelle d'ADR-0006 est conservée ; seul le moteur de file cha
   car la réécriture `/api` de l'admin cible un domaine en dur ; guide pas à pas dans
   `docs/deploiement-test.md`.
 
+
+## ADR-0026 — Codes des wilayas 59 à 69 (décret 26-206), anciens noms, commune comme référence
+**Statut** : Acceptée (2026-11-11, P1-01b) — demandée par le propriétaire.
+- **Contexte** : la loi 26-06 (JORA n° 25 du 5 avril 2026) crée 11 wilayas (articles 52 bis 10 à
+  52 bis 20) ; des médias ont publié une autre numérotation attribuée à un député. La loi renomme
+  aussi des communes (Ouled Atia → Menaâ, Tlatet Eddouar → Eddouair…), que les clients et les
+  transporteurs continuent d'écrire sous l'ancien nom ou l'ancienne wilaya.
+- **Décision** :
+  - Les codes 59 à 69 sont ceux du **décret présidentiel n° 26-206 du 25 mai 2026 (JO n° 40 du
+    3 juin 2026)** : 59 Aflou · 60 Barika · 61 El Kantara · 62 Bir El Ater · 63 El Aricha ·
+    64 Ksar Chellala · 65 Aïn Ouessara · 66 Messaad · 67 Ksar El Boukhari · 68 Bou Saâda ·
+    69 El Abiodh Sidi Cheikh. Vérifiés sur le PDF du JO n° 40 : identiques à nos données. La
+    numérotation de presse est ignorée. Un test fige ces 11 codes (`packages/geo/src/data.test.ts`).
+  - Chaque commune porte `legacyWilayaCode` (wilaya dans le modèle à 58, encore utilisé par les
+    transporteurs) et ses **alias** `GeoAlias` (ar/fr) : `FORMER_NAME` pour un nom changé par la
+    loi, `VARIANT` pour une orthographe en usage. Toute recherche (`findCommune`,
+    `searchCommunes`, `matchName`) les prend en compte.
+  - Une entrée douteuse porte `toVerify` (motif) au lieu d'être corrigée sans source : El Borma
+    (Ouargla/Touggourt) garde le rattachement du JO 2019, à trancher avec la liste EcoTrack.
+  - **Les commandes référencent la commune par son identifiant interne stable** (`communeId`,
+    numéro Wikidata) + un instantané des noms saisis ; la wilaya se déduit de la commune et n'est
+    jamais stockée comme code de référence. Un changement de découpage ne casse donc aucune
+    commande. Les codes transporteur passent par des tables de correspondance (phase 4).
+- **Conséquences** : migration `geo_aliases_legacy` (CHECK `legacyWilayaId BETWEEN 1 AND 58`,
+  `lang IN ('ar','fr')`) ; `pnpm db:geo` synchronise alias, wilaya d'origine et `toVerify`.
+
+## ADR-0027 — Où tournent le worker et le suivi transporteur (PROPOSÉE — choix du propriétaire attendu)
+**Statut** : Proposée (2026-11-11) — **en attente du choix du propriétaire**.
+- **Rectification** : la pile ne comporte **ni NestJS, ni BullMQ, ni Redis**. L'API est Fastify
+  (ADR-0022), la file de jobs est une table PostgreSQL maison (ADR-0023) : il n'y a qu'**un
+  processus worker** à héberger, qui lit la même base Neon.
+- **Contexte** : Vercel n'exécute que des fonctions à la demande (pas de processus permanent ; cron
+  Hobby limité à 1/jour). Or le suivi EcoTrack (phase 4), les relances CAPI et les retries exigent
+  un tick régulier (≤ 1–5 min). Aujourd'hui : planificateur externe gratuit toutes les 30 min sur
+  `/v1/internal/tick` — suffisant jusqu'à la phase 3, insuffisant ensuite.
+- **Option A — petit VPS (worker seul maintenant, toute la production plus tard)** :
+  Hetzner Cloud CX22 / CAX11 (2 vCPU, 4 Go, Allemagne) **≈ 4 à 6 € / mois**, ou Hostinger VPS
+  KVM 1 **≈ 5 à 7 € / mois** (prix publics indicatifs, à vérifier à la souscription). Docker +
+  `pnpm --filter @dz/api worker` en service systemd, tick toutes les 10 s. Avantage : c'est déjà la
+  cible de production (ADR-0013) ; on rode le serveur dès maintenant. Inconvénient : administration
+  (mises à jour, pare-feu, sauvegardes) à notre charge.
+- **Option B — worker managé (Fly.io ou Railway)** : une machine `shared-cpu-1x` 256–512 Mo
+  **≈ 2 à 5 $ / mois** (Fly.io, facturé à l'usage) ou Railway Hobby **5 $ / mois** (crédit d'usage
+  inclus). Déploiement depuis GitHub, aucune administration système. Inconvénient : un fournisseur
+  de plus, et la production sur VPS restera à monter en phase 6.
+- **Recommandation** : **A** (Hetzner), parce que la production y ira de toute façon et que le coût
+  est équivalent. En attendant le choix : on garde le tick externe à 30 min, rien n'est bloqué
+  avant la phase 4.

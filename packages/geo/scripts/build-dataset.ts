@@ -36,6 +36,20 @@ interface Overrides {
   extra: (WikidataCommune & { source: string })[];
   /** Wikidata items that are not communes (duplicates, junk). */
   exclude: Record<string, string>;
+  /** Communes renamed by law: new Arabic name (if known) and former names kept as aliases. */
+  renames: Record<
+    string,
+    {
+      ar?: string;
+      former: { lang: 'ar' | 'fr'; name: string }[];
+      toVerify?: string;
+      source: string;
+    }
+  >;
+  /** Extra spellings in use (not renames). */
+  variants: Record<string, { lang: 'ar' | 'fr'; name: string }[]>;
+  /** Entries to check against another source. */
+  toVerify: Record<string, string>;
 }
 const overrides = read<Overrides>('sources/overrides.json');
 const law2019 = read<LawArticle[]>('sources/jora-2019-078-loi-19-12.json');
@@ -142,13 +156,24 @@ function match(name: string, pool: WikidataCommune[]): WikidataCommune | undefin
 /** Stable integer id: the Wikidata item number (X… = reserved ids for communes not in Wikidata). */
 const numericId = (id: string) => Number(id.slice(1));
 
+interface Alias {
+  lang: 'ar' | 'fr';
+  name: string;
+  /** FORMER_NAME: renamed by law; VARIANT: other spelling in use (sources, carriers). */
+  kind: 'FORMER_NAME' | 'VARIANT';
+}
 interface Commune {
   id: number;
   wikidataId: string | null;
   wilayaCode: number;
+  /** Wilaya in the 58-wilaya model (2019–2026): carriers and customers still use it. */
+  legacyWilayaCode: number;
   nameAr: string;
   nameFr: string;
   nameAscii: string;
+  aliases: Alias[];
+  /** Why this entry must be checked against another source (null = verified). */
+  toVerify: string | null;
 }
 const communes: Commune[] = [];
 
@@ -159,13 +184,49 @@ function addCommune(wilayaCode: number, nameFr: string, source: WikidataCommune)
     problems.push(`no arabic: ${source.id} ${nameFr} (wilaya ${String(wilayaCode)})`);
     return;
   }
+  const legacyWilayaCode = wilayaCode <= 58 ? wilayaCode : MOTHER[wilayaCode];
+  if (legacyWilayaCode === undefined) problems.push(`no legacy wilaya for ${String(wilayaCode)}`);
+  const sourceAr = normalizeSpaces(source.ar.replace(/^بلدية\s+/u, ''));
+  const renamed = overrides.renames[source.id];
+  const nameAr = renamed?.ar ?? sourceAr;
+  const aliases: Alias[] = [];
+  const addAlias = (alias: Alias) => {
+    const key = alias.lang === 'ar' ? normalizeArabic(alias.name) : normalizeLatin(alias.name);
+    const own = alias.lang === 'ar' ? normalizeArabic(nameAr) : normalizeLatin(nameFr);
+    if (
+      key === own ||
+      aliases.some(
+        (a) =>
+          a.lang === alias.lang &&
+          (a.lang === 'ar' ? normalizeArabic(a.name) : normalizeLatin(a.name)) === key,
+      )
+    )
+      return;
+    aliases.push(alias);
+  };
+  // Former names declared for a rename by law (AR and FR), then other spellings from Wikidata.
+  for (const former of renamed?.former ?? []) addAlias({ ...former, kind: 'FORMER_NAME' });
+  if (sourceAr !== nameAr) addAlias({ lang: 'ar', name: sourceAr, kind: 'FORMER_NAME' });
+  for (const label of [source.fr, source.en]) {
+    if (label)
+      addAlias({
+        lang: 'fr',
+        name: normalizeSpaces(label),
+        kind: renamed ? 'FORMER_NAME' : 'VARIANT',
+      });
+  }
+  for (const variant of overrides.variants[source.id] ?? [])
+    addAlias({ ...variant, kind: 'VARIANT' });
   communes.push({
     id: numericId(source.id),
     wikidataId: source.id.startsWith('Q') ? source.id : null,
     wilayaCode,
-    nameAr: normalizeSpaces(source.ar.replace(/^بلدية\s+/u, '')),
+    legacyWilayaCode: legacyWilayaCode ?? wilayaCode,
+    nameAr,
     nameFr: nameFr.trim(),
     nameAscii: ascii(nameFr),
+    aliases,
+    toVerify: overrides.toVerify[source.id] ?? renamed?.toVerify ?? null,
   });
 }
 const normalizeSpaces = (value: string) => stripCommune(value).replace(/\s+/gu, ' ').trim();

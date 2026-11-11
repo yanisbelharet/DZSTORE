@@ -280,7 +280,12 @@ erDiagram
 | Limitation de débit | table `UNLOGGED rate_limit_bucket` gérée en SQL brut |
 | `User` | `CHECK ("failedTwoFactorCount" >= 0)` (compteur d'échecs 2FA, verrouillage au plafond) |
 | `Wilaya` / `Commune` | `CHECK (id BETWEEN 1 AND 99)` / `CHECK (id > 0)` ; commune = numéro Wikidata stable |
+| `Commune` / `GeoAlias` | `CHECK ("legacyWilayaId" BETWEEN 1 AND 58)` / `CHECK (lang IN ('ar','fr'))` |
 | `Job` | index partiel `("priority" DESC, "runAt", "id") WHERE status = 'PENDING'` (prise du prochain job) |
+
+> **Référence géographique d'une commande** (ADR-0026) : `communeId` (identifiant interne
+> stable) + instantané des noms ; la wilaya se déduit de la commune, jamais stockée comme code.
+> Anciens noms et variantes : table `GeoAlias` ; wilaya du modèle à 58 : `Commune.legacyWilayaId`.
 
 ### Index : justification des principaux
 - `Order(storeId, status, createdAt)` : liste OMS filtrée par statut, triée par date.

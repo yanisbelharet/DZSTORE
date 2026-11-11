@@ -74,4 +74,7 @@ personnelle dans les logs · `PROGRESS.md` à jour · commit fait et poussé.
 ## Git
 - Branche de travail : `claude/vibrant-allen-p2e3je`. Push autorisé **après chaque commit** sur
   cette branche uniquement ; jamais `main`, jamais de force-push, jamais de PR sans demande.
+- À chaque checkpoint : Claude ouvre une PR de la branche de travail vers `main` avec le compte
+  rendu et la checklist du checkpoint ; le propriétaire vérifie la CI, fusionne et crée le tag
+  `cp-N` sur GitHub. Si Claude ne peut pas lire la CI, il le dit — jamais « supposée verte ».
 - Secrets : `.env*` ignorés ; `.env.example` documente chaque variable sans valeur réelle.

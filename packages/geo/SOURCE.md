@@ -15,10 +15,11 @@ de produire un jeu incomplet ou ambigu (effectifs, doublons, nom arabe manquant)
 - Les listes ont été extraites colonne par colonne des PDF officiels (joradp.dz), et chaque
   liste a exactement l'effectif annoncé par son article. Le JORA de 2019 contient une coquille
   (« 5 In Amguel », sans point), traitée au rang attendu.
-- Les codes 59 à 69 suivent l'ordre des articles 52 bis 10 à 52 bis 20 : Aflou, Barika,
-  El Kantara, Bir El Ater, El Aricha, Ksar Chellala, Aïn Oussara, Messaad, Ksar El Boukhari,
-  Bou Saâda, El Abiodh Sidi Cheikh. Cette numérotation est conforme à celle publiée par ailleurs ;
-  **à confirmer** par un texte réglementaire dès qu'il est disponible.
+- Codes 59 à 69 : **décret présidentiel n° 26-206 du 25 mai 2026 (JO n° 40 du 3 juin 2026)** —
+  59 Aflou, 60 Barika, 61 El Kantara, 62 Bir El Ater, 63 El Aricha, 64 Ksar Chellala,
+  65 Aïn Ouessara, 66 Messaad, 67 Ksar El Boukhari, 68 Bou Saâda, 69 El Abiodh Sidi Cheikh.
+  Contrôlés sur le PDF du JO n° 40 (identiques à l'ordre des articles 52 bis 10 à 52 bis 20) ;
+  la numérotation publiée par des médias est ignorée (ADR-0026). Codes figés par un test.
 - Les noms français des communes des wilayas listées sont ceux du Journal officiel. Une wilaya
   porte le nom de son chef-lieu (première commune de la liste).
 - Les textes officiels publiés au Journal officiel ne font pas l'objet d'un droit d'auteur
@@ -38,11 +39,22 @@ de produire un jeu incomplet ou ambigu (effectifs, doublons, nom arabe manquant)
   stable si la commune change de wilaya. Une commune absente de Wikidata reçoit un identifiant
   réservé ≥ 1 000 000 000.
 
+## Wilaya d'origine, anciens noms, entrées à vérifier
+
+- `legacyWilayaCode` : wilaya de la commune dans le modèle à 58 (2019–2026), encore utilisé par
+  les transporteurs et les clients (un client d'Aflou choisit souvent « Laghouat »).
+- `aliases` : `FORMER_NAME` pour une commune renommée par la loi 26-06 (Ouled Atia → Menaâ,
+  Tlatet Eddouar → Eddouair, en arabe et en français), `VARIANT` pour une orthographe en usage
+  (Khezarra / Kheraza) ou une étiquette Wikidata différente du nom officiel.
+- `toVerify` : motif de doute, jamais corrigé sans source. El Borma (Ouargla ou Touggourt) suit
+  le JO 2019 jusqu'à confrontation avec la liste des communes EcoTrack (phase 4).
+
 ## Corrections manuelles : `sources/overrides.json`
 
 Chaque correction porte sa justification dans le fichier : alias d'orthographe (Tamenghasset =
 Tamanrasset…), nom arabe d'un élément qui n'en a pas, commune absente de Wikidata, doublons
-Wikidata exclus (vérifiés par les effectifs officiels des wilayas).
+Wikidata exclus (vérifiés par les effectifs officiels des wilayas), renommages (`renames`),
+variantes (`variants`) et doutes (`toVerify`).
 
 ## Vérifications
 

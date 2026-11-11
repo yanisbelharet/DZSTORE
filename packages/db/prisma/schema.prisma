@@ -301,16 +301,42 @@ model Wilaya {
 /// Commune (1541) : identifiant stable = numéro de l'élément Wikidata (un redécoupage change
 /// la wilaya, jamais l'identifiant).
 model Commune {
-  id         Int     @id
-  wilayaId   Int
-  nameAr     String
-  nameFr     String
-  nameAscii  String
-  postalCode String?
-  isActive   Boolean @default(true)
+  id             Int     @id
+  wilayaId       Int
+  nameAr         String
+  nameFr         String
+  nameAscii      String
+  postalCode     String?
+  isActive       Boolean @default(true)
+  /// Wilaya du modèle à 58 (2019–2026), encore utilisé par les transporteurs et les clients.
+  legacyWilayaId Int
+  /// Raison de vérifier cette entrée auprès d'une autre source (null = vérifiée).
+  toVerify       String?
 
-  wilaya Wilaya @relation(fields: [wilayaId], references: [id])
+  wilaya  Wilaya     @relation(fields: [wilayaId], references: [id])
+  aliases GeoAlias[]
 
   @@unique([wilayaId, nameAscii])
   @@index([wilayaId])
+  @@index([legacyWilayaId])
+}
+
+enum GeoAliasKind {
+  FORMER_NAME // renommée par une loi
+  VARIANT // autre orthographe en usage
+}
+
+/// Ancien nom ou variante d'une commune (AR/FR) : les clients et transporteurs les utilisent.
+model GeoAlias {
+  id        Int          @id @default(autoincrement())
+  communeId Int
+  lang      String // 'ar' | 'fr'
+  name      String
+  nameKey   String // nom normalisé (@dz/geo matchKey) pour la recherche
+  kind      GeoAliasKind
+
+  commune Commune @relation(fields: [communeId], references: [id], onDelete: Cascade)
+
+  @@unique([communeId, lang, nameKey])
+  @@index([nameKey])
 }

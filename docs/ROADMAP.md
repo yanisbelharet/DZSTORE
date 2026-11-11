@@ -177,6 +177,8 @@
 - **P1-04** Médias : interface `MediaStorage` (disque local, R2), job de variantes AVIF/WebP.
 - **P1-05** Produits et variantes : CRUD, SKU, coûts, statuts, SEO, duplication.
 - **P1-06** Offres par quantité, upsell et cross-sell (modèle + admin).
+- **P1-07** Dette avant la phase 2 : validation Zod des réponses de l'API dans l'admin (schémas
+  partagés, erreur lisible si le contrat diverge).
 - **Checkpoint 1** : catalogue complet administrable ; tests de normalisation géo ; médias servis
   en AVIF/WebP ; RBAC des nouvelles routes testé.
 
