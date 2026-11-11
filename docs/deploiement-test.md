@@ -125,6 +125,12 @@ Depuis l'admin, la page **Système** permet aussi de lancer un tour à la main.
 3. Admin → **Système** → « Envoyer un événement de test » → « Lancer un tour de traitement » :
    « Événements relayés : 1 » et le job `system.test-event` apparaît « Réussi ».
 
+## Région
+
+Les fonctions de l'API et du store tournent à Francfort (`fra1`, fixé dans `vercel.json`), à
+côté de la base Neon : crée la base Neon dans la région **Francfort (`eu-central-1`)**, sinon
+chaque requête traverse l'Atlantique.
+
 ## Limites connues
 
 - **Neon Free** : la base s'endort après 5 minutes sans activité ; la première requête suivante

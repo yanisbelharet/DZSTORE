@@ -195,6 +195,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = (
       const sessions = await deps.db.session.findMany({
         where: { userId: auth.userId, revokedAt: null, expiresAt: { gt: deps.clock.now() } },
         orderBy: { lastSeenAt: 'desc' },
+        take: 100,
       });
       return {
         sessions: sessions.map((session) => ({

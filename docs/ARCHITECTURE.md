@@ -279,6 +279,7 @@ erDiagram
 | Recherche | index trigramme (`pg_trgm`) sur `Order.customerName` ; recherche téléphone par préfixe normalisé |
 | Limitation de débit | table `UNLOGGED rate_limit_bucket` gérée en SQL brut |
 | `User` | `CHECK ("failedTwoFactorCount" >= 0)` (compteur d'échecs 2FA, verrouillage au plafond) |
+| `Job` | index partiel `("priority" DESC, "runAt", "id") WHERE status = 'PENDING'` (prise du prochain job) |
 
 ### Index : justification des principaux
 - `Order(storeId, status, createdAt)` : liste OMS filtrée par statut, triée par date.

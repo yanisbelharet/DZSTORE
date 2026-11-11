@@ -1,5 +1,3 @@
-import { apiErrorSchema } from '@dz/contracts';
-
 /** Error returned by the API, with its stable code (translated by the UI). */
 export class ApiError extends Error {
   override readonly name = 'ApiError';
@@ -24,6 +22,22 @@ export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
   signal?: AbortSignal;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * Reads the uniform error envelope (`apiErrorSchema` of @dz/contracts) without bundling Zod in
+ * the first screen of the admin: a small structural check is enough on this path.
+ */
+function apiErrorOf(
+  payload: unknown,
+): { code: string; message: string; details: Record<string, unknown> } | undefined {
+  if (!isRecord(payload) || !isRecord(payload.error)) return undefined;
+  const { code, message, details } = payload.error;
+  if (typeof code !== 'string' || typeof message !== 'string') return undefined;
+  return { code, message, details: isRecord(details) ? details : {} };
 }
 
 /**
@@ -54,11 +68,8 @@ export async function api<T>(
   if (response.status === 204) return undefined as T;
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const parsed = apiErrorSchema.safeParse(payload);
-    if (parsed.success) {
-      const { code, message, details } = parsed.data.error;
-      throw new ApiError(response.status, code, message, details ?? {});
-    }
+    const error = apiErrorOf(payload);
+    if (error) throw new ApiError(response.status, error.code, error.message, error.details);
     throw new ApiError(response.status, 'INTERNAL', `HTTP ${String(response.status)}`);
   }
   return payload as T;

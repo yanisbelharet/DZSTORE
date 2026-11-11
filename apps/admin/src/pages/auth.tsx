@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -157,7 +156,10 @@ export function TwoFactorSetupPage() {
   });
   useEffect(() => {
     if (!setup.data) return;
-    QRCode.toDataURL(setup.data.otpauthUrl, { margin: 1, width: 200 })
+    const url = setup.data.otpauthUrl;
+    // Loaded on demand: only the 2FA setup needs the QR code library.
+    import('qrcode')
+      .then(({ default: QRCode }) => QRCode.toDataURL(url, { margin: 1, width: 200 }))
       .then(setQr)
       .catch(() => {
         setQr(null);

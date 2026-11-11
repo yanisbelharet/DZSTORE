@@ -16,6 +16,13 @@ export interface CreateDbClientOptions {
 
 /** Prisma 7 client over the `pg` driver adapter (no Rust query engine). */
 export function createDbClient({ url, maxConnections = 10 }: CreateDbClientOptions): DbClient {
-  const adapter = new PrismaPg({ connectionString: url, max: maxConnections });
+  const adapter = new PrismaPg({
+    connectionString: url,
+    max: maxConnections,
+    // Fail fast instead of hanging until the serverless timeout (e.g. Neon waking up or down).
+    connectionTimeoutMillis: 10_000,
+    // Release idle connections quickly: serverless instances are frozen between requests.
+    idleTimeoutMillis: 30_000,
+  });
   return new PrismaClient({ adapter });
 }

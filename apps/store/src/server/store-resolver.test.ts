@@ -85,6 +85,21 @@ describe('résolution hôte → boutique (cache)', () => {
     expect((await t.resolve('b.dz'))?.slug).toBe('b.dz');
   });
 
+  it('API en panne : pas de nouvel appel pendant le délai de pause (pas d’attente à chaque page)', async () => {
+    const t = setup();
+    await t.resolve('a.dz');
+    t.advance(120_000);
+    t.answerWith(() => Promise.reject(new Error('API down')));
+    await t.resolve('a.dz');
+    await t.resolve('a.dz');
+    t.advance(10_000);
+    await t.resolve('a.dz');
+    expect(t.calls).toEqual(['a.dz', 'a.dz']);
+    t.advance(6_000);
+    await t.resolve('a.dz');
+    expect(t.calls).toEqual(['a.dz', 'a.dz', 'a.dz']);
+  });
+
   it('au-delà de la fenêtre « périmé si erreur », l’erreur remonte', async () => {
     const t = setup({ staleIfErrorMs: 1_000 });
     await t.resolve('a.dz');

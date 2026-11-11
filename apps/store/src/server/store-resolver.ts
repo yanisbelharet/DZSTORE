@@ -16,7 +16,12 @@ export interface StoreResolverOptions {
 interface Entry {
   store: PublicStore | null;
   storedAt: number;
+  /** While the API fails, the stale store is served without calling it again until then. */
+  retryAt?: number;
 }
+
+/** Pause between two API attempts while serving a stale store (the API is failing). */
+const ERROR_BACKOFF_MS = 15_000;
 
 export type StoreResolver = (hostname: string) => Promise<PublicStore | null>;
 
@@ -46,6 +51,9 @@ export function createStoreResolver(options: StoreResolverOptions): StoreResolve
     if (entry !== undefined && age < (entry.store === null ? negativeTtlMs : ttlMs)) {
       return Promise.resolve(entry.store);
     }
+    if (entry?.retryAt !== undefined && now() < entry.retryAt && entry.store !== null) {
+      return Promise.resolve(entry.store);
+    }
     const pending = inFlight.get(hostname);
     if (pending !== undefined) return pending;
 
@@ -55,8 +63,10 @@ export function createStoreResolver(options: StoreResolverOptions): StoreResolve
         return store;
       })
       .catch((error: unknown) => {
-        if (entry !== undefined && entry.store !== null && age < ttlMs + staleIfErrorMs)
+        if (entry !== undefined && entry.store !== null && age < ttlMs + staleIfErrorMs) {
+          entry.retryAt = now() + ERROR_BACKOFF_MS;
           return entry.store;
+        }
         throw error;
       })
       .finally(() => inFlight.delete(hostname));

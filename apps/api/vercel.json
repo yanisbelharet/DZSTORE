@@ -5,7 +5,15 @@
   "buildCommand": "pnpm run vercel-build",
   "outputDirectory": "public",
   "functions": {
-    "api/index.mjs": { "maxDuration": 30 }
+    "api/index.mjs": {
+      "maxDuration": 30
+    }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }]
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ],
+  "regions": ["fra1"]
 }
