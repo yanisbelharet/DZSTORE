@@ -1,6 +1,6 @@
 // Build command of the API project on Vercel (test environment, ADR-0025):
 // 1. apply migrations over the direct (non-pooled) Neon connection;
-// 2. apply the demo seed when SEED_ON_DEPLOY=true (idempotent, guarded by planSeed);
+// 2. synchronise the geographic reference, then apply the demo seed when SEED_ON_DEPLOY=true (idempotent, guarded by planSeed);
 // 3. bundle the serverless entry point.
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -16,5 +16,6 @@ if (process.env.DATABASE_URL === undefined && process.env.DATABASE_URL_UNPOOLED 
   process.exit(1);
 }
 run('pnpm', ['--filter', '@dz/db', 'migrate:deploy']);
+run('node', ['src/cli/sync-geo.ts']);
 if (process.env.SEED_ON_DEPLOY === 'true') run('node', ['src/cli/seed.ts']);
 run('node', ['scripts/bundle-vercel.ts']);

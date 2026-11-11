@@ -195,6 +195,13 @@ export default defineConfig(
     },
   },
   {
+    // Build script of the geography dataset (Node, reads/writes data files).
+    files: ['packages/geo/scripts/**/*.ts'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: { globals: globals.node },
+    rules: restrictImports(),
+  },
+  {
     // Tooling files of the apps (Vite, Astro, Playwright, e2e): typechecked by tsconfig.node.json.
     // End-to-end tests prepare their own database, hence the database import.
     files: ['apps/{admin,store}/*.config.ts', 'apps/{admin,store}/e2e/**/*.ts'],

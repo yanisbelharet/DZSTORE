@@ -20,13 +20,15 @@
     "create-owner": "node --env-file-if-exists=../../.env src/cli/create-owner.ts",
     "seed": "node --env-file-if-exists=../../.env src/cli/seed.ts",
     "vercel-build": "node scripts/vercel-build.ts",
-    "dev:http": "node --env-file-if-exists=../../.env --watch src/main-http.ts"
+    "dev:http": "node --env-file-if-exists=../../.env --watch src/main-http.ts",
+    "sync-geo": "node --env-file-if-exists=../../.env src/cli/sync-geo.ts"
   },
   "dependencies": {
     "@dz/contracts": "workspace:*",
     "@dz/core": "workspace:*",
     "@dz/db": "workspace:*",
     "@dz/domain": "workspace:*",
+    "@dz/geo": "workspace:*",
     "@fastify/cookie": "^11.1.5",
     "@fastify/cors": "^11.4.0",
     "@fastify/swagger": "^9.9.3",

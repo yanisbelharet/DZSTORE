@@ -279,6 +279,7 @@ erDiagram
 | Recherche | index trigramme (`pg_trgm`) sur `Order.customerName` ; recherche téléphone par préfixe normalisé |
 | Limitation de débit | table `UNLOGGED rate_limit_bucket` gérée en SQL brut |
 | `User` | `CHECK ("failedTwoFactorCount" >= 0)` (compteur d'échecs 2FA, verrouillage au plafond) |
+| `Wilaya` / `Commune` | `CHECK (id BETWEEN 1 AND 99)` / `CHECK (id > 0)` ; commune = numéro Wikidata stable |
 | `Job` | index partiel `("priority" DESC, "runAt", "id") WHERE status = 'PENDING'` (prise du prochain job) |
 
 ### Index : justification des principaux

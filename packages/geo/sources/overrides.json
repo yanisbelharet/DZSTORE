@@ -1,0 +1,87 @@
+{
+  "aliases": {
+    "11:Tamenghasset": {
+      "id": "Q205792",
+      "source": "JORA 2019 n° 78, art. 15 : « Tamenghasset » = Tamanrasset (تمنراست), chef-lieu de la wilaya 11"
+    },
+    "57:El Megaier": {
+      "id": "Q3050032",
+      "source": "JORA 2019 n° 78, art. 52 bis 8 : « El Megaier » = El M'Ghair (المغير), chef-lieu de la wilaya 57"
+    },
+    "58:Hassi Fehal": {
+      "id": "Q3128226",
+      "source": "JORA 2019 n° 78, art. 52 bis 9 : Hassi Fehal (حاسي الفحل), détachée de Ghardaïa"
+    },
+    "13:Tianet": {
+      "id": "Q3528212",
+      "source": "JORA 2026 n° 25, art. 17 : « Tianet » = Tienet (تيانت), wilaya de Tlemcen"
+    },
+    "5:Timgad": {
+      "id": "Q3528992",
+      "source": "Deux éléments Wikidata « Timgad » : Q3528992 (commune) retenu, Q459629 (site antique) écarté"
+    },
+    "26:Mezghenna": {
+      "id": "Q3307744",
+      "source": "JORA 2026 n° 25, art. 30 : Mezghenna ; élément Wikidata libellé « Mezerana » mais nom arabe مزغنة (Mezghenna)"
+    },
+    "26:Médéa": {
+      "id": "Q1982137",
+      "source": "Commune chef-lieu absente de la classe « commune d'Algérie » de Wikidata ; élément ville Médéa (المدية)"
+    },
+    "26:Eddouair": {
+      "id": "Q3530064",
+      "source": "JORA 2026 n° 25, art. 30 : « Eddouair » = Tlatet Eddouar (ثلاثة الدوائر), aussi appelée « Douair » (fr.wikipedia « Tlatet Eddouar », vérifié le 2026-11-11)"
+    },
+    "68:Menaâ": {
+      "id": "Q3358191",
+      "source": "JORA 2026 n° 25, art. 52 bis 19 : « Menaâ », anciennement Ouled Atia (أولاد عطية), daïra de Medjedel (fr.wikipedia « Menaâ », vérifié le 2026-11-11)"
+    }
+  },
+  "arabic": {
+    "Q131624555": {
+      "ar": "أدرار",
+      "source": "Commune chef-lieu d'Adrar : élément sans étiquette arabe ; nom de la ville Q251181 et de la daïra Q2083018 (أدرار)"
+    },
+    "Q3517374": {
+      "ar": "التلة",
+      "source": "Wikidata Q3517374 (Tella, Sétif) porte par erreur le nom arabe de Tala Ifacene ; article ar.wikipedia « التلة (ولاية سطيف) »"
+    }
+  },
+  "extra": [
+    {
+      "id": "Q1982137",
+      "fr": "Médéa",
+      "en": "Médéa",
+      "ar": "المدية",
+      "wilaya58": 26,
+      "source": "Wikidata Q1982137 (ville de Médéa), commune chef-lieu de la wilaya 26"
+    },
+    {
+      "id": "X1000000001",
+      "fr": "Sidi Slimane",
+      "en": "Sidi Slimane",
+      "ar": "سيدي سليمان",
+      "wilaya58": 32,
+      "source": "JORA 2026 n° 25, art. 36 (wilaya d'El Bayadh) ; absente de Wikidata (les homonymes Q3483288, Q3483291, Q3483292 sont dans d'autres wilayas) ; nom arabe identique à ces homonymes ; identifiant réservé X1000000001 (hors Wikidata, plage ≥ 1 000 000 000)"
+    },
+    {
+      "id": "Q770518",
+      "fr": "Boumerdès",
+      "en": "Boumerdès",
+      "ar": "بومرداس",
+      "wilaya58": 35,
+      "source": "Commune chef-lieu absente de la classe « commune d'Algérie » de Wikidata ; élément ville Q770518 (بومرداس). Boumerdès compte 32 communes"
+    }
+  ],
+  "exclude": {
+    "Q12710244": "Doublon de Tadjena (Q1650025, تاجنة), wilaya de Chlef : 35 communes",
+    "Q2921611": "Doublon sans nom arabe, wilaya de Bouira : 45 communes",
+    "Q2828792": "Doublon sans nom arabe, wilaya de Tizi Ouzou : 67 communes",
+    "Q25418293": "« Tiranë » : élément erroné, sans rattachement",
+    "Q459629": "Site antique de Timgad (doublon de la commune Q3528992)",
+    "Q12690114": "Doublon de Khezarra (Q3196167, لخزارة), wilaya de Guelma",
+    "Q12697618": "Doublon sans nom arabe de Menaâ / Ouled Atia (Q3358191)",
+    "Q28220904": "Hammam Ouled Ali : localité, pas une commune (Guelma compte 34 communes)",
+    "Q3148138": "Ighzer Amokrane : agglomération de la commune d'Ouzellaguen, pas une commune (Béjaïa compte 52 communes)"
+  }
+}

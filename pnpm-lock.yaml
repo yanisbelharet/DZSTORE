@@ -138,6 +138,9 @@ importers:
       '@dz/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@dz/geo':
+        specifier: workspace:*
+        version: link:../../packages/geo
       '@fastify/cookie':
         specifier: ^11.1.5
         version: 11.1.5

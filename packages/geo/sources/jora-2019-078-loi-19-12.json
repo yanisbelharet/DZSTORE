@@ -1,0 +1,290 @@
+[
+  {
+    "article": 5,
+    "bis": null,
+    "declared": 16,
+    "names": [
+      [1, "Adrar"],
+      [2, "Fenoghil"],
+      [3, "Tamest"],
+      [4, "Reggane"],
+      [5, "Sali"],
+      [6, "In Zghmir"],
+      [7, "Akabli"],
+      [8, "Tit"],
+      [9, "Ouled Ahmed Timmi"],
+      [10, "Tsabit"],
+      [11, "Bouda"],
+      [12, "Zaouiet Kounta"],
+      [13, "Aoulef"],
+      [14, "Sebaa"],
+      [15, "Timekten"],
+      [16, "Tamantit"]
+    ]
+  },
+  {
+    "article": 11,
+    "bis": null,
+    "declared": 27,
+    "names": [
+      [1, "Biskra"],
+      [2, "Oumach"],
+      [3, "Branis"],
+      [4, "Chetma"],
+      [5, "Sidi Okba"],
+      [6, "Aïn Zaatout"],
+      [7, "M’Chounèche"],
+      [8, "El Haouch"],
+      [9, "El Feïdh"],
+      [10, "Zeribet El Oued"],
+      [11, "Aïn Naga"],
+      [12, "El Kantara"],
+      [13, "El Outaya"],
+      [14, "Djemourah"],
+      [15, "Meziraa"],
+      [16, "Lioua"],
+      [17, "Lichana"],
+      [18, "Ourlal"],
+      [19, "M'Lili"],
+      [20, "Foughala"],
+      [21, "Bordj Ben Azzouz"],
+      [22, "Tolga"],
+      [23, "Khenguet Sidi Nadji"],
+      [24, "Mekhadma"],
+      [25, "El Ghrous"],
+      [26, "El Hadjeb"],
+      [27, "Bouchagroun"]
+    ]
+  },
+  {
+    "article": 12,
+    "bis": null,
+    "declared": 11,
+    "names": [
+      [1, "Béchar"],
+      [2, "Kenadsa"],
+      [3, "Erg Ferradj"],
+      [4, "Meridja"],
+      [5, "Lahmar"],
+      [6, "Mogheul"],
+      [7, "Abadla"],
+      [8, "Béni Ounif"],
+      [9, "Boukaïs"],
+      [10, "Taghit"],
+      [11, "Mechraa Houari Boumediène"]
+    ]
+  },
+  {
+    "article": 15,
+    "bis": null,
+    "declared": 5,
+    "names": [
+      [1, "Tamenghasset"],
+      [2, "Abalessa"],
+      [3, "Idlès"],
+      [4, "Tazrouk"],
+      [5, "In Amguel"]
+    ]
+  },
+  {
+    "article": 34,
+    "bis": null,
+    "declared": 7,
+    "names": [
+      [1, "Ouargla"],
+      [2, "Hassi Ben Abdelah"],
+      [3, "Aïn Beïda"],
+      [4, "N'Goussa"],
+      [5, "Hassi Messaoud"],
+      [6, "Rouissat"],
+      [7, "Sidi Khouiled"]
+    ]
+  },
+  {
+    "article": 37,
+    "bis": null,
+    "declared": 4,
+    "names": [
+      [1, "Illizi"],
+      [2, "Bordj Omar Driss"],
+      [3, "Debdeb"],
+      [4, "In Amenas"]
+    ]
+  },
+  {
+    "article": 43,
+    "bis": null,
+    "declared": 22,
+    "names": [
+      [1, "El Oued"],
+      [2, "Robbah"],
+      [3, "Sidi Aoun"],
+      [4, "Oued El Alenda"],
+      [5, "Trifaoui"],
+      [6, "Magrane"],
+      [7, "Bayadha"],
+      [8, "Beni Guecha"],
+      [9, "Nakhla"],
+      [10, "Ourmas"],
+      [11, "Guemar"],
+      [12, "Kouinine"],
+      [13, "Reguiba"],
+      [14, "Hamraia"],
+      [15, "Taghzout"],
+      [16, "El Ogla"],
+      [17, "Debila"],
+      [18, "Mih Ouansa"],
+      [19, "Hassani Abdelkrim"],
+      [20, "Hassi Khelifa"],
+      [21, "Taleb Larbi"],
+      [22, "Douar El Ma"]
+    ]
+  },
+  {
+    "article": 51,
+    "bis": null,
+    "declared": 10,
+    "names": [
+      [1, "Ghardaïa"],
+      [2, "Zelfana"],
+      [3, "Dhayet Bendhahoua"],
+      [4, "Sebseb"],
+      [5, "Berriane"],
+      [6, "Bounoura"],
+      [7, "Metlili"],
+      [8, "El Guerrera"],
+      [9, "El Atteuf"],
+      [10, "Mansoura"]
+    ]
+  },
+  {
+    "article": 52,
+    "bis": 0,
+    "declared": 10,
+    "names": [
+      [1, "Timimoun"],
+      [2, "Ouled Saïd"],
+      [3, "Aougrout"],
+      [4, "Deldoul"],
+      [5, "Metarfa"],
+      [6, "Tinerkouk"],
+      [7, "Ksar Kaddour"],
+      [8, "Charouine"],
+      [9, "Talmine"],
+      [10, "Ouled Aïssa"]
+    ]
+  },
+  {
+    "article": 52,
+    "bis": 1,
+    "declared": 2,
+    "names": [
+      [1, "Bordj Badji Mokhtar"],
+      [2, "Timiaouine"]
+    ]
+  },
+  {
+    "article": 52,
+    "bis": 2,
+    "declared": 6,
+    "names": [
+      [1, "Ouled Djellal"],
+      [2, "Sidi Khaled"],
+      [3, "Ras El Miaâd"],
+      [4, "Besbes"],
+      [5, "Chaïba"],
+      [6, "Doucen"]
+    ]
+  },
+  {
+    "article": 52,
+    "bis": 3,
+    "declared": 10,
+    "names": [
+      [1, "Béni Abbès"],
+      [2, "Tamtert"],
+      [3, "Kerzaz"],
+      [4, "Timoudi"],
+      [5, "Béni Ikhlef"],
+      [6, "El Ouata"],
+      [7, "Tabelbala"],
+      [8, "Ouled Khodeir"],
+      [9, "Ksabi"],
+      [10, "Igli"]
+    ]
+  },
+  {
+    "article": 52,
+    "bis": 4,
+    "declared": 3,
+    "names": [
+      [1, "In Salah"],
+      [2, "Foggaret Ezzaouia"],
+      [3, "In Ghar"]
+    ]
+  },
+  {
+    "article": 52,
+    "bis": 5,
+    "declared": 2,
+    "names": [
+      [1, "In Guezzam"],
+      [2, "Tin Zaouatine"]
+    ]
+  },
+  {
+    "article": 52,
+    "bis": 6,
+    "declared": 14,
+    "names": [
+      [1, "Touggourt"],
+      [2, "Nezla"],
+      [3, "Tebesbest"],
+      [4, "Zaouia El Abidia"],
+      [5, "Tamacine"],
+      [6, "Blidat Ameur"],
+      [7, "Megarine"],
+      [8, "M'Naguar"],
+      [9, "Taibet"],
+      [10, "Benaceur"],
+      [11, "Sidi Slimane"],
+      [12, "El Hadjira"],
+      [13, "El Allia"],
+      [14, "El Borma"]
+    ]
+  },
+  {
+    "article": 52,
+    "bis": 7,
+    "declared": 2,
+    "names": [
+      [1, "Djanet"],
+      [2, "Bordj El Haouasse"]
+    ]
+  },
+  {
+    "article": 52,
+    "bis": 8,
+    "declared": 8,
+    "names": [
+      [1, "El Megaier"],
+      [2, "Oum Touyour"],
+      [3, "Still"],
+      [4, "Sidi Khelil"],
+      [5, "Djamaâ"],
+      [6, "Sidi Amrane"],
+      [7, "Tendla"],
+      [8, "M'Rara"]
+    ]
+  },
+  {
+    "article": 52,
+    "bis": 9,
+    "declared": 3,
+    "names": [
+      [1, "El Meniaâ"],
+      [2, "Hassi Gara"],
+      [3, "Hassi Fehal"]
+    ]
+  }
+]

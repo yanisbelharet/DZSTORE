@@ -284,3 +284,33 @@ model ScheduledTask {
   lastRunAt       DateTime? @db.Timestamptz(3)
   enabled         Boolean   @default(true)
 }
+
+// ─── Référentiel géographique (P1-01, @dz/geo) ───
+
+/// Wilaya (code officiel, loi 84-09 modifiée : 69 wilayas depuis la loi 26-06).
+model Wilaya {
+  id        Int     @id // code officiel
+  nameAr    String
+  nameFr    String
+  nameAscii String
+  isActive  Boolean @default(true)
+
+  communes Commune[]
+}
+
+/// Commune (1541) : identifiant stable = numéro de l'élément Wikidata (un redécoupage change
+/// la wilaya, jamais l'identifiant).
+model Commune {
+  id         Int     @id
+  wilayaId   Int
+  nameAr     String
+  nameFr     String
+  nameAscii  String
+  postalCode String?
+  isActive   Boolean @default(true)
+
+  wilaya Wilaya @relation(fields: [wilayaId], references: [id])
+
+  @@unique([wilayaId, nameAscii])
+  @@index([wilayaId])
+}

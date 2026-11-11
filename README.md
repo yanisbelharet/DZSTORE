@@ -25,6 +25,7 @@ utilise un PostgreSQL natif (Debian/Ubuntu). La CI utilise PostgreSQL 17.
 ## Données de démo (local)
 ```bash
 pnpm db:deploy            # applique les migrations sur dz_dev
+pnpm db:geo               # référentiel géographique : 69 wilayas, 1541 communes
 pnpm db:seed              # boutiques et comptes de démo (idempotent : relançable sans risque)
 pnpm db:seed --reset      # vide d'abord toutes les tables — base locale uniquement
 ```

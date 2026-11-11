@@ -44,7 +44,7 @@ Objectifs mesurables :
 | Terme | Définition |
 |---|---|
 | COD | Paiement à la livraison : le livreur encaisse `codAmount` et le reverse au marchand |
-| Wilaya / commune | Divisions administratives algériennes (découpage de référence : 58 wilayas) |
+| Wilaya / commune | Divisions administratives algériennes (découpage en vigueur : **69 wilayas, 1541 communes**, loi n° 26-06 du 4 avril 2026 ; voir `packages/geo/SOURCE.md`) |
 | Stop desk | Livraison en point relais/bureau du transporteur (moins cher que domicile) |
 | Confirmation | Appel du client par un agent pour valider la commande avant expédition |
 | Suivi | Traitement des colis expédiés en difficulté (client injoignable, report, suspendu) |

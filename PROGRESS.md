@@ -10,7 +10,7 @@
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : Phase 1 — `/tache P1-01` (référentiel géo : 69 wilayas, loi n° 26-06). Déploiement réel de P0-12
+- **Prochaine action** : Phase 1 — `/tache P1-02` (boutiques et domaines : administration). Déploiement réel de P0-12
   dès que le propriétaire fournit un jeton Vercel et une clé Neon (formulaire sécurisé depuis
   claude.ai sur ordinateur — l'app mobile ne l'affiche pas) ou suit `docs/deploiement-test.md`.
 
@@ -32,6 +32,7 @@
 ## Terminé
 | Date | Élément | Commit |
 |---|---|---|
+| 2026-11-11 | **P1-01** — Référentiel géo `@dz/geo` : 69 wilayas / 1541 communes (loi n° 26-06, JORA n° 25 du 5 avril 2026, et loi 19-12) ; listes officielles extraites des PDF du JORA (effectifs vérifiés), noms arabes Wikidata (CC0), 47 rapprochements approchés et 16 corrections justifiées (`sources/overrides.json`), identifiants stables (numéro Wikidata) ; normalisation ar/latin + Jaro-Winkler ; tables `Wilaya`/`Commune`, `pnpm db:geo` (idempotent, non destructif), `GET /v1/geo/…` en cache ; `SOURCE.md` | voir `git log` |
 | 2026-11-09 | **P0-12** — Environnement de test prêt : API assemblée en un fichier par Vite pour Vercel (migrations directes + seed à la demande + bundle ; vérifié avec `vercel build` hors ligne : fonction `nodejs24.x`, Argon2 embarqué, et bundle servi réellement contre PostgreSQL), `vercel.json` des 3 projets, domaines `*.vercel.app` par boutique (seed `SEED_STORE_HOSTS`), marqueur `DEPLOYMENT_ENVIRONMENT=test` (mention + `noindex` store/admin), page admin « Système » (tour de traitement + événement de test traité via l'outbox, e2e), guide `docs/deploiement-test.md`, ADR-0025, BUG-002 corrigé | voir `git log` |
 | 2026-11-03 | **P0-11** — `pnpm db:seed` : 2 boutiques (`beaute.localhost`, `maison.localhost`) et 6 comptes (un par rôle + agent mixte), idempotent (2e exécution : rien ne change, pas même `updatedAt` — prouvé par mutation), répare les données de démo sans toucher au reste ; refus en production ; `--reset` réservé aux bases locales ; mot de passe et 2FA de démo publics **uniquement** en local, `SEED_DEMO_PASSWORD` exigé ailleurs ; connexion OWNER + TOTP de démo testée ; fabriques `createFactories` (`@dz/db/testing`) ; README « Données de démo » | voir `git log` |
 | 2026-11-03 | **P0-10** — Store Astro 7 SSR (adaptateur Node ou Vercel choisi au build) + Preact : boutique résolue par l'en-tête `Host` via `GET /v1/public/stores/resolve` (nouvel accès `service`, jeton de service), cache mémoire (TTL, coalescence, périmé si API en panne, borné) ; langue par préfixe (défaut de la boutique sans préfixe, 301 sinon), `dir="rtl"` en arabe ; thème en variables CSS ; police Cairo auto-hébergée ; CSP par hachages + `frame-ancestors`, en-têtes de sécurité et de cache CDN ; 404 boutique, 404/503 bilingues, `/health` ; ADR-0024 ; e2e mobile/desktop (2 hôtes, ar/fr, 404, 503) + budgets Lighthouse (perf 0,99–1, a11y/SEO 1, 0 Ko de JS) | voir `git log` |

@@ -32,6 +32,7 @@ import { registerAuthentication } from './modules/auth/plugin.ts';
 import { auditRoutes } from './modules/audit/routes.ts';
 import { authRoutes } from './modules/auth/routes.ts';
 import { publicStoresRoutes } from './modules/stores/public-routes.ts';
+import { geoRoutes } from './modules/geo/routes.ts';
 import { storesRoutes } from './modules/stores/routes.ts';
 import { usersRoutes } from './modules/users/routes.ts';
 import { healthRoutes } from './routes/health.ts';
@@ -142,6 +143,7 @@ export async function buildApp({
   await app.register(healthRoutes, { checkDatabase, readyTimeoutMs });
   await app.register(usersRoutes, { prefix: '/v1/users', deps: { db, clock } });
   await app.register(storesRoutes, { prefix: '/v1/stores', db });
+  await app.register(geoRoutes, { prefix: '/v1/geo', db });
   await app.register(publicStoresRoutes, { prefix: '/v1/public/stores', db });
   await app.register(auditRoutes, { prefix: '/v1/audit', db });
   await app.register(jobsRoutes, { prefix: '/v1/jobs', db, jobs, clock });
