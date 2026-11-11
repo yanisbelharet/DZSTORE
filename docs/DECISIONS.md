@@ -201,6 +201,10 @@
   un verrou consultatif PostgreSQL).
 - **Conséquences** : mêmes handlers, mêmes garanties (idempotence, retries, DLQ) dans les deux
   modes ; en test, les délais de traitement dépendent de la fréquence des ticks (documenté).
+- **Mise à jour (checkpoint 0, 2026-11-11)** : pas de verrou consultatif (ADR-0023 : des ticks
+  simultanés traitent des jobs disjoints, compatible PgBouncer) ni de tick après chaque réponse
+  HTTP : le tick vient du planificateur externe et du bouton « Système » (ADR-0025). Le premier
+  tick de chaque instance déclare les tâches planifiées.
 
 ## ADR-0021 — Admin et API sur la même origine
 **Statut** : Acceptée (2026-11-02)

@@ -87,7 +87,7 @@ export function createJobEngine({
     executor: DbExecutor,
     name: string,
     payload: unknown,
-    options: EnqueueOptions = {},
+    options: Partial<EnqueueOptions> = {},
   ) {
     return enqueueJob(executor, registry, name, payload, { runAt: clock.now(), ...options });
   }
@@ -114,7 +114,7 @@ export function createJobEngine({
           ORDER BY "id" LIMIT 1 FOR UPDATE SKIP LOCKED`;
         if (!event) return false;
         failed = event;
-        for (const subscriber of subscriptions[event.type] ?? []) {
+        for (const [index, subscriber] of (subscriptions[event.type] ?? []).entries()) {
           await enqueueJob(
             tx,
             registry,
@@ -123,7 +123,8 @@ export function createJobEngine({
             {
               runAt: now,
               ...subscriber.options?.(event),
-              dedupeKey: `outbox:${event.id.toString()}`,
+              // One job per subscriber, even when two subscribers share a queue.
+              dedupeKey: `outbox:${event.id.toString()}:${String(index)}`,
             },
           );
         }
@@ -135,17 +136,16 @@ export function createJobEngine({
       });
     } catch (error) {
       if (!failed) throw error;
+      // Atomic and conditional: never overwrite an event another relay dispatched meanwhile.
       const attempts = failed.attempts + 1;
-      await db.outboxEvent.update({
-        where: { id: failed.id },
-        data: {
-          attempts,
-          lastError: errorMessage(error),
-          ...(attempts >= OUTBOX_MAX_ATTEMPTS
-            ? { status: 'FAILED' }
-            : { availableAt: new Date(now.getTime() + backoffDelayMs(attempts, random)) }),
-        },
-      });
+      const retryAt = new Date(now.getTime() + backoffDelayMs(attempts, random));
+      await db.$executeRaw`
+        UPDATE "OutboxEvent" SET
+          "attempts" = "attempts" + 1,
+          "lastError" = ${errorMessage(error)},
+          "status" = CASE WHEN "attempts" + 1 >= ${OUTBOX_MAX_ATTEMPTS} THEN 'FAILED'::"OutboxStatus" ELSE "status" END,
+          "availableAt" = CASE WHEN "attempts" + 1 >= ${OUTBOX_MAX_ATTEMPTS} THEN "availableAt" ELSE ${retryAt}::timestamptz END
+        WHERE "id" = ${failed.id} AND "status" = 'PENDING'`;
       log.error(
         { err: error, outboxEventId: failed.id.toString(), attempts },
         'outbox relay failed',
@@ -154,6 +154,7 @@ export function createJobEngine({
     }
   }
 
+  /** Declares the schedules (idempotent); tasks no longer declared are disabled. */
   async function ensureSchedules(): Promise<void> {
     const now = clock.now();
     for (const schedule of schedules) {
@@ -161,10 +162,16 @@ export function createJobEngine({
       await db.scheduledTask.upsert({
         where: { name: schedule.name },
         create: { name: schedule.name, intervalSeconds: schedule.intervalSeconds, nextRunAt: now },
-        update: { intervalSeconds: schedule.intervalSeconds },
+        update: { intervalSeconds: schedule.intervalSeconds, enabled: true },
       });
     }
+    await db.scheduledTask.updateMany({
+      where: { name: { notIn: schedules.map((schedule) => schedule.name) }, enabled: true },
+      data: { enabled: false },
+    });
   }
+  // Serverless has no worker start-up: the first tick of each instance declares the schedules.
+  let schedulesReady: Promise<void> | undefined;
 
   /** Enqueues due scheduled tasks; a conditional update guarantees a single firing. */
   async function fireDueSchedules(now: Date): Promise<number> {
@@ -173,6 +180,11 @@ export function createJobEngine({
     });
     let fired = 0;
     for (const task of due) {
+      // An unknown task (renamed, removed, older code) must never block the other jobs.
+      if (!registry.has(task.name)) {
+        log.warn({ task: task.name }, 'scheduled task without registered job skipped');
+        continue;
+      }
       const claimed = await db.$transaction(async (tx) => {
         const { count } = await tx.scheduledTask.updateMany({
           where: { name: task.name, nextRunAt: task.nextRunAt },
@@ -220,13 +232,70 @@ export function createJobEngine({
     }
   }
 
-  async function settle(job: Job, data: Parameters<DbClient['job']['updateMany']>[0]['data']) {
-    await db.job.updateMany({ where: { id: job.id, status: 'RUNNING', lockedBy: workerId }, data });
+  /** Applies the outcome only if this worker still holds the lease; false = lease lost. */
+  async function settle(
+    job: Job,
+    data: Parameters<DbClient['job']['updateMany']>[0]['data'],
+  ): Promise<boolean> {
+    const { count } = await db.job.updateMany({
+      where: { id: job.id, status: 'RUNNING', lockedBy: workerId },
+      data,
+    });
+    return count === 1;
+  }
+
+  /** Extends the lease while the handler runs; aborts the handler if the lease is lost. */
+  function holdLease(job: Job, controller: AbortController, jobLog: typeof log) {
+    const timer = setInterval(
+      () => {
+        void db.job
+          .updateMany({
+            where: { id: job.id, status: 'RUNNING', lockedBy: workerId },
+            data: { lockedUntil: new Date(clock.now().getTime() + leaseMs) },
+          })
+          .then(({ count }) => {
+            if (count === 0 && !controller.signal.aborted) {
+              jobLog.warn('job lease lost, handler aborted');
+              controller.abort(new Error('lease lost'));
+            }
+          })
+          .catch((error: unknown) => {
+            jobLog.warn({ err: error }, 'job lease renewal failed');
+          });
+      },
+      Math.max(1_000, Math.floor(leaseMs / 3)),
+    );
+    return () => {
+      clearInterval(timer);
+    };
   }
 
   async function runJob(job: Job): Promise<'succeeded' | 'retried' | 'dead'> {
     const started = performance.now();
     const jobLog = log.child({ jobId: job.id.toString(), queue: job.queue, attempt: job.attempts });
+    // Permanent faults (unknown queue, payload refused by its schema): dead-letter at once.
+    let permanent: unknown;
+    if (!registry.has(job.queue)) permanent = new Error(`Unknown job "${job.queue}"`);
+    else {
+      try {
+        registry.get(job.queue).validate(job.payload);
+      } catch (error) {
+        permanent = error;
+      }
+    }
+    if (permanent !== undefined) {
+      await settle(job, {
+        status: 'DEAD',
+        finishedAt: clock.now(),
+        lastError: errorMessage(permanent),
+        lockedBy: null,
+        lockedUntil: null,
+      });
+      jobLog.error({ err: permanent }, 'job moved to dead-letter (permanent error)');
+      return 'dead';
+    }
+    const controller = new AbortController();
+    const release = holdLease(job, controller, jobLog);
     try {
       const definition = registry.get(job.queue);
       await definition.run(job.payload, {
@@ -235,16 +304,23 @@ export function createJobEngine({
         db,
         clock,
         logger: jobLog,
+        signal: controller.signal,
       });
-      await settle(job, {
+      release();
+      const settled = await settle(job, {
         status: 'SUCCEEDED',
         finishedAt: clock.now(),
         lockedBy: null,
         lockedUntil: null,
       });
+      if (!settled) {
+        jobLog.warn('job finished after losing its lease: outcome not recorded');
+        return 'retried';
+      }
       jobLog.info({ durationMs: Math.round(performance.now() - started) }, 'job succeeded');
       return 'succeeded';
     } catch (error) {
+      release();
       const now = clock.now();
       const lastError = errorMessage(error);
       if (error instanceof RetryLaterError) {
@@ -296,6 +372,11 @@ export function createJobEngine({
       retried: 0,
       dead: 0,
     };
+    schedulesReady ??= ensureSchedules().catch((error: unknown) => {
+      schedulesReady = undefined;
+      throw error;
+    });
+    await schedulesReady;
     stats.recovered = await recoverExpiredLeases(clock.now());
     while (performance.now() < deadline && (await relayOne(clock.now()))) stats.relayed += 1;
     stats.scheduled = await fireDueSchedules(clock.now());

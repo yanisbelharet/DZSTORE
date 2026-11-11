@@ -259,6 +259,76 @@ describe('exécution, retries et dead-letter', () => {
   });
 });
 
+describe('robustesse (revue du checkpoint 0)', () => {
+  it('une tâche planifiée inconnue est ignorée et ne bloque pas les autres jobs', async () => {
+    const { engine, runs } = harness({});
+    await testDb.db.scheduledTask.create({
+      data: {
+        name: 'old.removed',
+        intervalSeconds: 60,
+        nextRunAt: new Date('2026-01-01T00:00:00Z'),
+      },
+    });
+    await engine.enqueue(testDb.db, 'test.work', { key: 'ok' });
+    const stats = await engine.runTick({ budgetMs: 5_000 });
+    expect(stats.succeeded).toBe(1);
+    expect(runs).toEqual([{ key: 'ok', attempt: 1 }]);
+    // Not declared by this engine: disabled by ensureSchedules.
+    expect(
+      (await testDb.db.scheduledTask.findUniqueOrThrow({ where: { name: 'old.removed' } })).enabled,
+    ).toBe(false);
+  });
+
+  it('deux abonnés vers la même file : deux jobs (aucun perdu)', async () => {
+    const { engine, runs } = harness({
+      subscriptions: {
+        'order.confirmed': [
+          { job: 'test.work', payload: () => ({ key: 'meta' }) },
+          { job: 'test.work', payload: () => ({ key: 'tiktok' }) },
+        ],
+      },
+    });
+    await publishEvent(
+      testDb.db,
+      { type: 'order.confirmed', aggregateType: 'Order', aggregateId: 'o1', payload: {} },
+      new Date('2026-11-02T10:00:00Z'),
+    );
+    await engine.runTick({ budgetMs: 5_000 });
+    expect(runs.map((run) => run.key).sort()).toEqual(['meta', 'tiktok']);
+  });
+
+  it('payload refusé par son schéma : dead-letter immédiat, sans retries', async () => {
+    const { engine, runs } = harness({});
+    const job = await testDb.db.job.create({
+      data: {
+        queue: 'test.work',
+        payload: { wrong: true },
+        runAt: new Date('2026-11-02T10:00:00Z'),
+      },
+    });
+    const stats = await engine.runTick({ budgetMs: 5_000 });
+    expect(stats.dead).toBe(1);
+    expect(runs).toEqual([]);
+    const row = await testDb.db.job.findUniqueOrThrow({ where: { id: job.id } });
+    expect([row.status, row.attempts]).toEqual(['DEAD', 1]);
+  });
+
+  it('bail perdu pendant l’exécution : résultat non compté comme réussi', async () => {
+    const { engine } = harness({
+      leaseMs: 3_000,
+      behaviour: async () => {
+        // Another worker took the job over (simulated): the lease no longer belongs to us.
+        await testDb.db.job.updateMany({ data: { lockedBy: 'worker-other' } });
+        await new Promise((resolve) => setTimeout(resolve, 1_300));
+      },
+    });
+    await engine.enqueue(testDb.db, 'test.work', { key: 'long' });
+    const stats = await engine.runTick({ budgetMs: 10_000 });
+    expect(stats.succeeded).toBe(0);
+    expect((await testDb.db.job.findFirstOrThrow()).status).toBe('RUNNING');
+  });
+});
+
 describe('tâches planifiées', () => {
   it('déclenchées une seule fois par échéance, même avec deux workers', async () => {
     const { engine, engine2, clock } = harness({
@@ -359,7 +429,14 @@ describe('API des jobs', () => {
     expect(again.json()).toMatchObject({ relayed: 0 });
     const job = systemJobs[0];
     if (!job) throw new Error('system job missing');
-    const context = { jobId: 1n, attempt: 2, db: testDb.db, clock, logger: memoryLogger().logger };
+    const context = {
+      jobId: 1n,
+      attempt: 2,
+      db: testDb.db,
+      clock,
+      logger: memoryLogger().logger,
+      signal: new AbortController().signal,
+    };
     await job.run({ outboxEventId }, context);
     expect(await processed()).toBe(1);
 
@@ -408,14 +485,21 @@ describe('API des jobs', () => {
         })
       ).statusCode,
     ).toBe(401);
-    await testDb.db.job.create({ data: { queue: 'maintenance.purge-rate-limits', payload: {} } });
+    const job = await testDb.db.job.create({
+      data: { queue: 'maintenance.purge-rate-limits', payload: {} },
+    });
     const ok = await app.inject({
       method: 'POST',
       url: '/v1/internal/tick',
       headers: { 'x-tick-secret': secret },
     });
     expect(ok.statusCode).toBe(200);
-    expect(ok.json()).toMatchObject({ succeeded: 1 });
+    // The tick also declares and fires the maintenance schedules (serverless, no worker).
+    expect(ok.json<{ succeeded: number }>().succeeded).toBeGreaterThanOrEqual(1);
+    expect((await testDb.db.job.findUniqueOrThrow({ where: { id: job.id } })).status).toBe(
+      'SUCCEEDED',
+    );
+    expect(await testDb.db.scheduledTask.count()).toBeGreaterThan(0);
     await app.close();
   });
 });

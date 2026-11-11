@@ -10,6 +10,8 @@ export interface JobContext {
   db: DbClient;
   clock: Clock;
   logger: Logger;
+  /** Aborted when this worker loses the job's lease: stop external side effects. */
+  signal: AbortSignal;
 }
 
 /** A registered job: payload validated by Zod when enqueued and again when run. */

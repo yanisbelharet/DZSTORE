@@ -3,8 +3,8 @@ import type { DbExecutor, Prisma } from '@dz/db';
 import type { JobRegistry } from './registry.ts';
 
 export interface EnqueueOptions {
-  /** Defaults to the engine clock's "now" (never the database clock: one time source). */
-  runAt?: Date;
+  /** Due time, from the application clock (never the database clock: one time source). */
+  runAt: Date;
   priority?: number;
   /** Same (job, dedupeKey) is enqueued at most once. */
   dedupeKey?: string;
@@ -22,7 +22,7 @@ export async function enqueueJob(
   registry: JobRegistry,
   name: string,
   payload: unknown,
-  options: EnqueueOptions = {},
+  options: EnqueueOptions,
 ): Promise<boolean> {
   const definition = registry.get(name);
   // Validated by the job schema: the result is plain JSON data.
@@ -32,7 +32,7 @@ export async function enqueueJob(
       {
         queue: name,
         payload: data,
-        ...(options.runAt === undefined ? {} : { runAt: options.runAt }),
+        runAt: options.runAt,
         ...(options.priority === undefined ? {} : { priority: options.priority }),
         ...(options.dedupeKey === undefined ? {} : { dedupeKey: options.dedupeKey }),
         ...(options.concurrencyKey === undefined ? {} : { concurrencyKey: options.concurrencyKey }),

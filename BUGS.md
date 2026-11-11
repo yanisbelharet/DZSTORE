@@ -21,6 +21,19 @@
 - **Test de régression** : —
 
 ## Résolus
+### BUG-010 — File de jobs : blocages et pertes en cas particuliers
+- **Date** : 2026-11-11 · **Sévérité** : S2 · **Statut** : corrigé
+- **Symptômes** : une tâche planifiée sans job enregistré bloquait tous les ticks ; tâches
+  planifiées jamais déclarées en serverless (purges absentes sur Vercel) ; deux abonnés d'un
+  événement vers la même file ⇒ un job perdu ; payload invalide rejoué 8 fois ; bail non
+  renouvelé (double exécution possible au-delà de 5 min) ; comptage d'échec du relais non
+  atomique.
+- **Correctif** : tâche inconnue ignorée et tâches non déclarées désactivées ; déclaration au
+  premier tick ; clé `outbox:<id>:<abonné>` ; dead-letter immédiat (file inconnue, payload
+  refusé) ; bail renouvelé, gestionnaire averti (`signal`), résultat ignoré si bail perdu ;
+  `UPDATE` atomique et conditionnel ; `runAt` obligatoire à la mise en file.
+- **Tests** : `apps/api/src/jobs/engine.int.test.ts` (« robustesse »). **Données affectées** : aucune.
+
 ### BUG-008 — Enregistrer un utilisateur dans l'admin le déconnectait toujours
 - **Date** : 2026-11-11 · **Sévérité** : S2 · **Statut** : corrigé
 - **Symptôme** : tout enregistrement (même un renommage) révoquait les sessions de la cible ;
