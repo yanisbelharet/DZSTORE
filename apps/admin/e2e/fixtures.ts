@@ -11,6 +11,8 @@ export const AGENT = {
   password: 'agent password e2e',
 };
 
+export const STORE = { name: 'Boutique E2E', hostname: 'e2e.localhost' };
+
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
 function base32Decode(text: string): Buffer {

@@ -4,15 +4,27 @@
 > chaque tâche (`/tache`) et de chaque session (`/fin-session`).
 
 ## État actuel
-- **Phase** : 0 — Fondations (12/12 tâches ; P0-12 prêt, déploiement réel en attente des comptes).
+- **Phase** : 1 — Catalogue et store COD (phases 1 et 2 fusionnées, ordre a–i du propriétaire).
 - **Mode** : autonomie complète (propriétaire, 2026-11-09 : « continue, fais les choix toi-même,
   ne me demande aucune acceptation ») ; décisions consignées en ADR et dans les comptes rendus.
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : plan de P1-02 et correspondance phase 1 soumis au propriétaire ; ADR-0027 (worker : VPS ou Fly/Railway) en attente de son choix. Déploiement réel de P0-12
-  dès que le propriétaire fournit un jeton Vercel et une clé Neon (formulaire sécurisé depuis
-  claude.ai sur ordinateur — l'app mobile ne l'affiche pas) ou suit `docs/deploiement-test.md`.
+- **Prochaine action** : `/tache P1-03` (médias AVIF/WebP). Worker : VPS (ADR-0027 A) à souscrire
+  avant la phase 4.
+
+## File d'attente — Phase 1 (détails : `docs/ROADMAP.md`)
+1. ~~P1-01 — Référentiel géo (+ P1-01b)~~ ✅
+2. ~~P1-02 — Boutiques, version minimale~~ ✅
+3. P1-03 — Médias (AVIF/WebP)
+4. P1-04 — Produits et variantes
+5. P1-05 — Offres par quantité, upsell
+6. P1-06 — Codes promo
+7. P1-07 — Frais de livraison (wilaya × type × transporteur, wilaya mère pour 59–69)
+8. P1-08 — Validation Zod des réponses dans l'admin
+9. P1-09 — Blocs + page produit · P1-10 — Formulaire COD · P1-11 — Commande idempotente + UTM
+10. P1-12 — Anti-fraude · P1-13 — Formulaires abandonnés · P1-14 — Merci, upsell, suivi client
+11. P1-15 — Personnalisation, pages légales · P1-16 — Budgets et e2e · Checkpoint 1
 
 ## File d'attente — Phase 0 (détails et critères : `docs/ROADMAP.md`)
 1. ~~P0-01 — Monorepo et outillage qualité~~ ✅
@@ -32,6 +44,7 @@
 ## Terminé
 | Date | Élément | Commit |
 |---|---|---|
+| 2026-11-12 | **P1-02** — Boutiques (version minimale) : `GET/PATCH /v1/stores/:id` (lecture `stores.read`, modification `stores.manage`, périmètre boutique, journal d'audit `store.updated`, préfixe unique, langue par défaut proposée) ; page admin « Boutiques » (paramètres, thème de base, domaines en lecture seule, réponses validées par Zod) ; e2e ; roadmap phases 1+2 fusionnées (ordre a–i) ; ADR-0027 acceptée (VPS) | voir `git log` |
 | 2026-11-11 | **P1-01b** — Codes 59–69 confirmés par le décret 26-206 (JO n° 40, vérifié sur PDF) et figés par un test ; `legacyWilayaCode` sur chaque commune ; anciens noms et variantes (`GeoAlias` ar/fr : Ouled Atia → Menaâ, Tlatet Eddouar → Eddouair, Khezarra/Kheraza) ; `toVerify` (El Borma, Menaâ/Eddouair en arabe) ; moteur `matchName` (exact/normalisé/approché + confiance) ; migration `geo_aliases_legacy` ; ADR-0026 ; ADR-0027 (hébergement du worker) **proposé, choix du propriétaire attendu** | voir `git log` |
 | 2026-11-11 | **P1-01** — Référentiel géo `@dz/geo` : 69 wilayas / 1541 communes (loi n° 26-06, JORA n° 25 du 5 avril 2026, et loi 19-12) ; listes officielles extraites des PDF du JORA (effectifs vérifiés), noms arabes Wikidata (CC0), 47 rapprochements approchés et 16 corrections justifiées (`sources/overrides.json`), identifiants stables (numéro Wikidata) ; normalisation ar/latin + Jaro-Winkler ; tables `Wilaya`/`Commune`, `pnpm db:geo` (idempotent, non destructif), `GET /v1/geo/…` en cache ; `SOURCE.md` | voir `git log` |
 | 2026-11-09 | **P0-12** — Environnement de test prêt : API assemblée en un fichier par Vite pour Vercel (migrations directes + seed à la demande + bundle ; vérifié avec `vercel build` hors ligne : fonction `nodejs24.x`, Argon2 embarqué, et bundle servi réellement contre PostgreSQL), `vercel.json` des 3 projets, domaines `*.vercel.app` par boutique (seed `SEED_STORE_HOSTS`), marqueur `DEPLOYMENT_ENVIRONMENT=test` (mention + `noindex` store/admin), page admin « Système » (tour de traitement + événement de test traité via l'outbox, e2e), guide `docs/deploiement-test.md`, ADR-0025, BUG-002 corrigé | voir `git log` |
@@ -76,7 +89,7 @@
 - ✅ PROGRESS, CLAUDE.md, ARCHITECTURE, DECISIONS (ADR-0024/0025, ADR-0020 aligné, ADR-0023 confirmé).
 - Revue par 3 subagents : 10 correctifs (BUG-003 à BUG-010 + durcissements).
 - **Dettes acceptées** : 3 requêtes SQL par requête authentifiée (reporté en phase 10 sauf
-  lenteur mesurée) ; DTO de l'admin non validés par Zod (**tâche P1-07, avant la phase 2**) ; palette de commandes à charger à
+  lenteur mesurée) ; DTO de l'admin non validés par Zod (**tâche P1-08, avant la page produit**) ; palette de commandes à charger à
   la demande ; codes de secours en SHA-256 sans clé serveur (HMAC) ; journal d'audit append-only
   par convention (trigger à ajouter) ; limite de débit par compte = vecteur de déni de service
   (accepté : 2FA, pas de verrouillage dur des comptes 2FA) ; e2e admin sur serveur de dev (pas

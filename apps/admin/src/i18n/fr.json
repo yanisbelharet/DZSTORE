@@ -30,7 +30,8 @@
     "menu": "Menu",
     "allStores": "Toutes les boutiques",
     "store": "Boutique",
-    "system": "Système"
+    "system": "Système",
+    "stores": "Boutiques"
   },
   "auth": {
     "title": "Connexion",
@@ -175,5 +176,39 @@
       "DEAD": "Échec définitif",
       "CANCELLED": "Annulé"
     }
+  },
+  "stores": {
+    "title": "Boutiques",
+    "active": "Active",
+    "inactive": "Inactive",
+    "settings": "Boutique « {{name}} »",
+    "general": "Général",
+    "name": "Nom de la boutique",
+    "orderPrefix": "Préfixe des numéros de commande",
+    "orderPrefixHint": "2 à 4 lettres, propre à chaque boutique (ex. BT → BT-000123). S'applique aux prochaines commandes.",
+    "locales": "Langues proposées",
+    "defaultLocale": "Langue par défaut",
+    "defaultLocaleMissing": "La langue par défaut doit faire partie des langues proposées.",
+    "theme": "Thème de base",
+    "colors": {
+      "primary": "Couleur principale",
+      "onPrimary": "Texte sur la couleur principale",
+      "background": "Fond",
+      "surface": "Surface",
+      "text": "Texte",
+      "muted": "Texte secondaire"
+    },
+    "radius": "Arrondi des angles",
+    "radii": {
+      "none": "Aucun",
+      "sm": "Léger",
+      "md": "Moyen",
+      "lg": "Prononcé"
+    },
+    "domains": "Domaines",
+    "domainsHint": "Lecture seule : le branchement d'un domaine personnalisé arrive en phase 10.",
+    "primary": "Principal",
+    "noDomain": "Aucun domaine",
+    "saved": "Paramètres enregistrés"
   }
 }

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeHostname, publicStoreSchema, themeSchema } from './stores.ts';
+import {
+  isDefaultLocaleOffered,
+  normalizeHostname,
+  orderPrefixSchema,
+  publicStoreSchema,
+  themeSchema,
+  updateStoreSchema,
+} from './stores.ts';
 
 describe('thème de boutique', () => {
   it('un thème vide reçoit toutes les valeurs par défaut', () => {
@@ -66,5 +73,27 @@ describe('boutique publique', () => {
     expect(publicStoreSchema.safeParse({ ...base, locales: [] }).success).toBe(false);
     expect(publicStoreSchema.safeParse({ ...base, locales: ['en'] }).success).toBe(false);
     expect(publicStoreSchema.parse({ ...base, locales: ['ar', 'fr'] }).theme.radius).toBe('md');
+  });
+});
+
+describe('paramètres de boutique (admin)', () => {
+  it('préfixe de commande : 2 à 4 lettres, mis en majuscules', () => {
+    expect(orderPrefixSchema.parse(' dz ')).toBe('DZ');
+    for (const bad of ['D', 'DZSTO', 'D1', 'DZ-', 'دز']) {
+      expect(orderPrefixSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it('modification partielle, champs inconnus et langues en double refusés', () => {
+    expect(updateStoreSchema.parse({ name: '  Ma boutique ' })).toEqual({ name: 'Ma boutique' });
+    expect(updateStoreSchema.safeParse({ slug: 'autre' }).success).toBe(false);
+    expect(updateStoreSchema.safeParse({ isActive: false }).success).toBe(false);
+    expect(updateStoreSchema.safeParse({ locales: ['ar', 'ar'] }).success).toBe(false);
+    expect(updateStoreSchema.safeParse({ locales: [] }).success).toBe(false);
+  });
+
+  it('la langue par défaut doit être proposée', () => {
+    expect(isDefaultLocaleOffered('ar', ['ar', 'fr'])).toBe(true);
+    expect(isDefaultLocaleOffered('fr', ['ar'])).toBe(false);
   });
 });

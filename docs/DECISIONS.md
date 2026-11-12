@@ -330,8 +330,9 @@ L'outbox transactionnelle d'ADR-0006 est conservée ; seul le moteur de file cha
 - **Conséquences** : migration `geo_aliases_legacy` (CHECK `legacyWilayaId BETWEEN 1 AND 58`,
   `lang IN ('ar','fr')`) ; `pnpm db:geo` synchronise alias, wilaya d'origine et `toVerify`.
 
-## ADR-0027 — Où tournent le worker et le suivi transporteur (PROPOSÉE — choix du propriétaire attendu)
-**Statut** : Proposée (2026-11-11) — **en attente du choix du propriétaire**.
+## ADR-0027 — Où tournent le worker et le suivi transporteur
+**Statut** : Acceptée (2026-11-12) — option **A** retenue par le propriétaire (« Ok » sur la
+recommandation) ; serveur à souscrire avant la phase 4 (suivi EcoTrack).
 - **Rectification** : la pile ne comporte **ni NestJS, ni BullMQ, ni Redis**. L'API est Fastify
   (ADR-0022), la file de jobs est une table PostgreSQL maison (ADR-0023) : il n'y a qu'**un
   processus worker** à héberger, qui lit la même base Neon.

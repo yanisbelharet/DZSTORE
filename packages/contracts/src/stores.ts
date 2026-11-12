@@ -76,3 +76,52 @@ export type ResolveStoreResponse = z.infer<typeof resolveStoreResponseSchema>;
 
 /** Header carrying the storefront's service token on `/v1/public/*` calls. */
 export const SERVICE_TOKEN_HEADER = 'x-dz-service-token';
+
+/** Prefix of order numbers (`DZ` → DZ-000123): 2 to 4 capital letters, unique per store. */
+export const orderPrefixSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z]{2,4}$/u, { error: 'expected 2 to 4 letters' });
+
+/** Store as seen by the back office (`GET /v1/stores/:id`). */
+export const adminStoreSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  orderPrefix: z.string(),
+  defaultLocale: storeLocaleSchema,
+  locales: z.array(storeLocaleSchema).min(1),
+  theme: themeSchema,
+  isActive: z.boolean(),
+  /** Read-only in P1-02: custom domains are wired in phase 10. */
+  domains: z.array(z.object({ hostname: z.string(), isPrimary: z.boolean() })),
+  updatedAt: z.string(),
+});
+export type AdminStore = z.infer<typeof adminStoreSchema>;
+
+/**
+ * Settings change (`PATCH /v1/stores/:id`). Every field is optional; the default language must
+ * belong to the offered languages once merged with the stored values (checked by the API).
+ */
+export const updateStoreSchema = z
+  .object({
+    name: z.string().trim().min(2).max(80),
+    orderPrefix: orderPrefixSchema,
+    defaultLocale: storeLocaleSchema,
+    locales: z
+      .array(storeLocaleSchema)
+      .min(1)
+      .max(STORE_LOCALES.length)
+      .refine((values) => new Set(values).size === values.length, { error: 'duplicate locale' }),
+    theme: themeSchema,
+  })
+  .partial()
+  .strict();
+export type UpdateStoreInput = z.infer<typeof updateStoreSchema>;
+
+/** True when the default language is one of the offered languages. */
+export const isDefaultLocaleOffered = (
+  defaultLocale: StoreLocale,
+  locales: readonly StoreLocale[],
+): boolean => locales.includes(defaultLocale);

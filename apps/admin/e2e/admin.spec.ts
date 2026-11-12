@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-import { AGENT, OWNER, totpNow } from './fixtures.ts';
+import { AGENT, OWNER, STORE, totpNow } from './fixtures.ts';
 
 const SHOTS = 'test-results/screenshots';
 
@@ -93,6 +93,24 @@ test.describe.serial('admin — parcours OWNER puis agent', () => {
     await expect(page.getByTestId('tick-dead')).toHaveText('0');
     await expect(page.getByRole('cell', { name: 'system.test-event' })).toBeVisible();
     await page.screenshot({ path: `${SHOTS}/system-desktop.png`, fullPage: true });
+
+    // Store settings (P1-02): server-side validation, then a saved change.
+    await page.getByRole('navigation').getByRole('link', { name: 'Boutiques' }).click();
+    await page.getByRole('link', { name: new RegExp(STORE.name, 'u') }).click();
+    await expect(page.getByRole('heading', { name: `Boutique « ${STORE.name} »` })).toBeVisible();
+    await expect(page.getByText(STORE.hostname)).toBeVisible();
+    await page.getByLabel('Préfixe des numéros de commande').fill('bt');
+    await page.getByLabel('Français').uncheck();
+    await page.getByLabel('Langue par défaut').selectOption('fr');
+    await expect(page.getByText('La langue par défaut doit faire partie')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
+    await page.getByLabel('Français').check();
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page.getByText('Paramètres enregistrés')).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel('Préfixe des numéros de commande')).toHaveValue('BT');
+    await expect(page.getByLabel('Langue par défaut')).toHaveValue('fr');
+    await page.screenshot({ path: `${SHOTS}/store-settings-desktop.png`, fullPage: true });
   });
 
   test('agent : pas d’accès à la gestion des utilisateurs', async ({ page }) => {

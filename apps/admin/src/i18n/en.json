@@ -30,7 +30,8 @@
     "menu": "Menu",
     "allStores": "All stores",
     "store": "Store",
-    "system": "System"
+    "system": "System",
+    "stores": "Stores"
   },
   "auth": {
     "title": "Sign in",
@@ -175,5 +176,39 @@
       "DEAD": "Dead",
       "CANCELLED": "Cancelled"
     }
+  },
+  "stores": {
+    "title": "Stores",
+    "active": "Active",
+    "inactive": "Inactive",
+    "settings": "Store “{{name}}”",
+    "general": "General",
+    "name": "Store name",
+    "orderPrefix": "Order number prefix",
+    "orderPrefixHint": "2 to 4 letters, unique per store (e.g. BT → BT-000123). Applies to future orders.",
+    "locales": "Offered languages",
+    "defaultLocale": "Default language",
+    "defaultLocaleMissing": "The default language must be one of the offered languages.",
+    "theme": "Base theme",
+    "colors": {
+      "primary": "Primary colour",
+      "onPrimary": "Text on primary colour",
+      "background": "Background",
+      "surface": "Surface",
+      "text": "Text",
+      "muted": "Secondary text"
+    },
+    "radius": "Corner radius",
+    "radii": {
+      "none": "None",
+      "sm": "Small",
+      "md": "Medium",
+      "lg": "Large"
+    },
+    "domains": "Domains",
+    "domainsHint": "Read-only: custom domain setup arrives in phase 10.",
+    "primary": "Primary",
+    "noDomain": "No domain",
+    "saved": "Settings saved"
   }
 }

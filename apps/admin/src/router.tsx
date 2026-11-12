@@ -21,6 +21,8 @@ const authPage = (name: 'LoginPage' | 'TwoFactorSetupPage' | 'TwoFactorVerifyPag
 const usersPage = (name: 'UsersPage' | 'UserFormPage') =>
   lazyRouteComponent(() => import('./pages/users.tsx'), name);
 const AccountPage = lazyRouteComponent(() => import('./pages/account.tsx'), 'AccountPage');
+const storesPage = (name: 'StoresPage' | 'StoreSettingsPage') =>
+  lazyRouteComponent(() => import('./pages/stores.tsx'), name);
 const SystemPage = lazyRouteComponent(() => import('./pages/system.tsx'), 'SystemPage');
 
 interface RouterContext {
@@ -106,6 +108,18 @@ const userEditRoute = createRoute({
   beforeLoad: requirePermission('users.read'),
   component: usersPage('UserFormPage'),
 });
+const storesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/stores',
+  beforeLoad: requirePermission('stores.read'),
+  component: storesPage('StoresPage'),
+});
+const storeSettingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/stores/$storeId',
+  beforeLoad: requirePermission('stores.read'),
+  component: storesPage('StoreSettingsPage'),
+});
 const accountRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/account',
@@ -132,6 +146,8 @@ const routeTree = rootRoute.addChildren([
     usersRoute,
     userNewRoute,
     userEditRoute,
+    storesRoute,
+    storeSettingsRoute,
     accountRoute,
     systemRoute,
     forbiddenRoute,

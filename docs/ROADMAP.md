@@ -168,32 +168,34 @@
 
 ---
 
-## Phase 1 — Référentiels et catalogue
-- **P1-01** Référentiel géo : jeu de données ar/fr/ASCII + `SOURCE.md`, normalisation (skill
-  `dz-geo`), seed, API de lecture mise en cache.
-- **P1-02** Boutiques et domaines : administration (paramètres, langues, préfixe de numéro,
-  thème de base).
-- **P1-03** Tarifs de livraison par boutique × wilaya × type (admin + API publique en cache).
-- **P1-04** Médias : interface `MediaStorage` (disque local, R2), job de variantes AVIF/WebP.
-- **P1-05** Produits et variantes : CRUD, SKU, coûts, statuts, SEO, duplication.
-- **P1-06** Offres par quantité, upsell et cross-sell (modèle + admin).
-- **P1-07** Dette avant la phase 2 : validation Zod des réponses de l'API dans l'admin (schémas
-  partagés, erreur lisible si le contrat diverge).
-- **Checkpoint 1** : catalogue complet administrable ; tests de normalisation géo ; médias servis
-  en AVIF/WebP ; RBAC des nouvelles routes testé.
-
-## Phase 2 — Store COD
-- **P2-01** Package `blocks` v1 (contrat, blocs du gabarit produit) + rendu Astro.
-- **P2-02** Page produit (gabarit par blocs, galerie, offres, SEO, cache CDN par hôte + purge).
-- **P2-03** Formulaire COD (îlot Preact, wilaya/commune ar/fr, stop desk, frais dynamiques,
-  validation partagée, amélioration progressive).
-- **P2-04** Création de commande (prix serveur, idempotence, numérotation, client, attribution).
-- **P2-05** Anti-fraude v1 (skill `cod-antifraude`).
-- **P2-06** Page merci + upsell après soumission (ajout à la même commande).
-- **P2-07** Événements funnel (`StoreEvent`) et cookie d'attribution.
-- **P2-08** Budgets de performance et e2e du parcours complet (ar/fr, mobile/desktop).
-- **Checkpoint 2** : commande de bout en bout, double soumission ⇒ une commande, commande
-  frauduleuse bloquée silencieusement, Lighthouse mobile ≥ 90 et LCP < 2,5 s sur page produit.
+## Phase 1 — Catalogue et store COD (phases 1 et 2 fusionnées, propriétaire 2026-11-12)
+Ordre fixé par le propriétaire (a → i). Les anciens identifiants P2-xx sont rappelés entre
+parenthèses ; les tâches ★ n'existaient pas dans la roadmap initiale.
+- **P1-01** Référentiel géo (+ P1-01b : codes 59–69 du décret 26-206, anciens noms, wilaya
+  d'origine) ✅
+- **P1-02** Boutiques, version minimale : paramètres (nom, langues, préfixe de numéro, thème de
+  base), domaines en lecture seule (branchement des domaines personnalisés en phase 10).
+- **a — P1-03** Médias : interface `MediaStorage` (disque local, R2), variantes AVIF/WebP.
+- **a — P1-04** Produits et variantes : CRUD, SKU, coûts, statuts, SEO, duplication.
+- **b — P1-05** Offres par quantité, upsell et cross-sell (modèle + admin).
+- **b — P1-06 ★** Codes promo (montant/pourcentage, plafond, période, usage ; recalcul serveur).
+- **c — P1-07** Frais de livraison par boutique × wilaya × type × transporteur ; wilayas 59–69 :
+  frais par défaut de la wilaya mère (`legacyWilayaCode`), le transporteur facturant sur 58.
+- **P1-08** Dette : validation Zod des réponses de l'API dans l'admin (schémas partagés).
+- **d — P1-09** Package `blocks` v1 + page produit (ex-P2-01, P2-02) : Lighthouse mobile ≥ 90.
+- **e — P1-10** Formulaire COD (ex-P2-03) : recherche de commune par nom qui propose la bonne
+  wilaya (anciens noms, ancienne wilaya : « Aflou » choisi sous « Laghouat »).
+- **e — P1-11** Création de commande idempotente (ex-P2-04) + capture UTM/fbclid/ttclid et
+  événements funnel (ex-P2-07).
+- **f — P1-12** Anti-fraude v1 (ex-P2-05, skill `cod-antifraude`).
+- **g — P1-13 ★** Formulaires abandonnés (saisie partielle consentie, relance par l'OMS).
+- **h — P1-14** Page merci + upsell 1 clic (ex-P2-06) ; **★** page de suivi client.
+- **i — P1-15 ★** Personnalisation de base et pages légales (mentions, CGV, confidentialité).
+- **P1-16** Budgets de performance et e2e du parcours complet (ex-P2-08).
+- **Checkpoint 1** : commande passée depuis un vrai téléphone en 4G sur l'environnement de test ;
+  double soumission ⇒ une commande ; une commande d'une nouvelle wilaya et une commune saisie
+  sous son ancien nom fonctionnent ; règles anti-fraude couvertes par des tests ; Lighthouse
+  mobile ≥ 90 sur la page produit.
 
 ## Phase 3 — OMS et confirmation
 - **P3-01** Machine à états + service de transition + timeline (`OrderEvent`).
