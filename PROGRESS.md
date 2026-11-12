@@ -10,14 +10,14 @@
 - **Session 1 (2026-11-01/02)** : cadrage terminé, kit reconstruit, architecture rédigée,
   **validés par le propriétaire le 2026-11-02**.
 - **En cours** : —
-- **Prochaine action** : `/tache P1-04` (produits et variantes). Worker : VPS (ADR-0027 A) à souscrire
+- **Prochaine action** : `/tache P1-05` (offres par quantité, upsell). Worker : VPS (ADR-0027 A) à souscrire
   avant la phase 4.
 
 ## File d'attente — Phase 1 (détails : `docs/ROADMAP.md`)
 1. ~~P1-01 — Référentiel géo (+ P1-01b)~~ ✅
 2. ~~P1-02 — Boutiques, version minimale~~ ✅
 3. ~~P1-03 — Médias (AVIF/WebP)~~ ✅
-4. P1-04 — Produits et variantes
+4. ~~P1-04 — Produits et variantes~~ ✅
 5. P1-05 — Offres par quantité, upsell
 6. P1-06 — Codes promo
 7. P1-07 — Frais de livraison (wilaya × type × transporteur, wilaya mère pour 59–69)
@@ -44,6 +44,7 @@
 ## Terminé
 | Date | Élément | Commit |
 |---|---|---|
+| 2026-11-12 | **P1-04** — Produits et variantes : modèles `Product`/`ProductVariant`/`ProductMedia` (migration + CHECK prix, SKU, slug) ; options localisées ar/fr (3 au plus) → une variante par combinaison ; règles pures dans `@dz/domain` (cohérence des variantes, conditions de publication, valeurs libres pour la duplication) ; API `/v1/stores/:storeId/products` (liste filtrée par statut/nom/slug/SKU, création, remplacement avec verrou optimiste, statut, duplication en brouillon), identifiants de variantes conservés (échange de SKU géré), coût masqué sans `finance.read`, audit ; admin « Produits » (liste, formulaire complet : contenus, options, tableau des variantes, images de la médiathèque, SEO ; erreurs détaillées) ; e2e. Reporté et noté : catégories (P1-15), duplication des offres (P1-05) | voir `git log` |
 | 2026-11-12 | **P1-03** — Médias : modèle `Media` (migration + CHECK), `MediaStorage` disque local / Cloudflare R2 (SigV4 maison vérifiée sur l'exemple AWS, sans SDK) / désactivé ; téléversement brut ≤ 4 Mo, format lu dans les octets, original nettoyé (orientation, EXIF/GPS supprimés, 40 Mpx max) ; job `media.process` (AVIF + WebP 320→1920, idempotent, `FAILED` + motif) ; fichiers locaux servis en cache immuable ; liste, texte alternatif ar/fr, suppression (audit) ; page admin « Médiathèque » (e2e : envoi → traitement → image affichée) ; guide R2 | voir `git log` |
 | 2026-11-12 | **P1-02** — Boutiques (version minimale) : `GET/PATCH /v1/stores/:id` (lecture `stores.read`, modification `stores.manage`, périmètre boutique, journal d'audit `store.updated`, préfixe unique, langue par défaut proposée) ; page admin « Boutiques » (paramètres, thème de base, domaines en lecture seule, réponses validées par Zod) ; e2e ; roadmap phases 1+2 fusionnées (ordre a–i) ; ADR-0027 acceptée (VPS) | voir `git log` |
 | 2026-11-11 | **P1-01b** — Codes 59–69 confirmés par le décret 26-206 (JO n° 40, vérifié sur PDF) et figés par un test ; `legacyWilayaCode` sur chaque commune ; anciens noms et variantes (`GeoAlias` ar/fr : Ouled Atia → Menaâ, Tlatet Eddouar → Eddouair, Khezarra/Kheraza) ; `toVerify` (El Borma, Menaâ/Eddouair en arabe) ; moteur `matchName` (exact/normalisé/approché + confiance) ; migration `geo_aliases_legacy` ; ADR-0026 ; ADR-0027 (hébergement du worker) **proposé, choix du propriétaire attendu** | voir `git log` |

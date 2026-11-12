@@ -1,33 +1,27 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, Outlet, useNavigate, useRouteContext } from '@tanstack/react-router';
-import { Activity, Home, LogOut, Menu, Store, UserCog, Users } from 'lucide-react';
+import { Link, Outlet, useNavigate, useRouteContext, useRouterState } from '@tanstack/react-router';
+import { Activity, Home, LogOut, Menu, Package, Store, UserCog, Users } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isLanguage, LANGUAGES, setLanguage } from '../i18n/index.ts';
 import { api } from '../lib/api.ts';
+import { cn } from '../lib/cn.ts';
+import { sectionOf } from '../lib/navigation.ts';
+import type { Section } from '../lib/navigation.ts';
 import { useHotkey } from '../lib/hotkeys.ts';
 import { can, signOut } from '../lib/session.ts';
+import { readSelectedStore, writeSelectedStore } from '../lib/store-selection.ts';
 import type { Me } from '../lib/session.ts';
 import { CommandPalette } from './command-palette.tsx';
 import { Button } from './ui/button.tsx';
 import { Dialog } from './ui/dialog.tsx';
 import { Select } from './ui/field.tsx';
 
-const STORE_KEY = 'dz.admin.store';
-
-function readStore(): string {
-  try {
-    return localStorage.getItem(STORE_KEY) ?? 'all';
-  } catch {
-    return 'all';
-  }
-}
-
 function StoreSwitcher() {
   const { t } = useTranslation();
-  const [value, setValue] = useState(readStore);
+  const [value, setValue] = useState(readSelectedStore);
   const stores = useQuery({
     queryKey: ['stores'],
     queryFn: () => api<{ items: { id: string; name: string }[] }>('/v1/stores'),
@@ -39,11 +33,7 @@ function StoreSwitcher() {
       value={value}
       onChange={(event) => {
         setValue(event.target.value);
-        try {
-          localStorage.setItem(STORE_KEY, event.target.value);
-        } catch {
-          // Preference only.
-        }
+        writeSelectedStore(event.target.value);
       }}
     >
       <option value="all">{t('nav.allStores')}</option>
@@ -58,16 +48,19 @@ function StoreSwitcher() {
 
 function NavLinks({ me, onNavigate }: { me: Me; onNavigate?: () => void }) {
   const { t } = useTranslation();
-  const link = (
-    to: '/' | '/users' | '/stores' | '/account' | '/system',
-    icon: ReactNode,
-    label: string,
-  ) => (
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const current = sectionOf(pathname);
+  const link = (to: Section, icon: ReactNode, label: string) => (
     <Link
       to={to}
       onClick={onNavigate}
-      activeOptions={{ exact: to === '/' }}
-      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 data-[status=active]:bg-indigo-50 data-[status=active]:font-medium data-[status=active]:text-indigo-900"
+      // The router's own prefix matching would mark « Boutiques » on a store's products page.
+      activeOptions={{ exact: true }}
+      aria-current={current === to ? 'page' : undefined}
+      className={cn(
+        'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100',
+        current === to && 'bg-indigo-50 font-medium text-indigo-900',
+      )}
     >
       {icon}
       {label}
@@ -77,6 +70,7 @@ function NavLinks({ me, onNavigate }: { me: Me; onNavigate?: () => void }) {
     <nav className="flex flex-col gap-1" aria-label={t('nav.menu')}>
       {link('/', <Home size={18} />, t('nav.home'))}
       {can(me, 'users.read') ? link('/users', <Users size={18} />, t('nav.users')) : null}
+      {can(me, 'catalog.read') ? link('/products', <Package size={18} />, t('nav.products')) : null}
       {can(me, 'stores.read') ? link('/stores', <Store size={18} />, t('nav.stores')) : null}
       {can(me, 'jobs.manage') ? link('/system', <Activity size={18} />, t('nav.system')) : null}
       {link('/account', <UserCog size={18} />, t('nav.account'))}

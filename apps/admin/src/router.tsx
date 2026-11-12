@@ -23,6 +23,12 @@ const usersPage = (name: 'UsersPage' | 'UserFormPage') =>
 const AccountPage = lazyRouteComponent(() => import('./pages/account.tsx'), 'AccountPage');
 const storesPage = (name: 'StoresPage' | 'StoreSettingsPage') =>
   lazyRouteComponent(() => import('./pages/stores.tsx'), name);
+const productsPage = (name: 'ProductsHomePage' | 'ProductsPage') =>
+  lazyRouteComponent(() => import('./pages/products-list.tsx'), name);
+const ProductFormPage = lazyRouteComponent(
+  () => import('./pages/product-form.tsx'),
+  'ProductFormPage',
+);
 const MediaPage = lazyRouteComponent(() => import('./pages/media.tsx'), 'MediaPage');
 const SystemPage = lazyRouteComponent(() => import('./pages/system.tsx'), 'SystemPage');
 
@@ -127,6 +133,30 @@ const storeMediaRoute = createRoute({
   beforeLoad: requirePermission('catalog.read'),
   component: MediaPage,
 });
+const productsHomeRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/products',
+  beforeLoad: requirePermission('catalog.read'),
+  component: productsPage('ProductsHomePage'),
+});
+const productsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/stores/$storeId/products',
+  beforeLoad: requirePermission('catalog.read'),
+  component: productsPage('ProductsPage'),
+});
+const productNewRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/stores/$storeId/products/new',
+  beforeLoad: requirePermission('catalog.write'),
+  component: ProductFormPage,
+});
+const productEditRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/stores/$storeId/products/$productId',
+  beforeLoad: requirePermission('catalog.read'),
+  component: ProductFormPage,
+});
 const accountRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/account',
@@ -156,6 +186,10 @@ const routeTree = rootRoute.addChildren([
     storesRoute,
     storeSettingsRoute,
     storeMediaRoute,
+    productsHomeRoute,
+    productsRoute,
+    productNewRoute,
+    productEditRoute,
     accountRoute,
     systemRoute,
     forbiddenRoute,

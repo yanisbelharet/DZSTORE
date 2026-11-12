@@ -177,12 +177,14 @@ parenthèses ; les tâches ★ n'existaient pas dans la roadmap initiale.
   base), domaines en lecture seule (branchement des domaines personnalisés en phase 10).
 - **a — P1-03** Médias : interface `MediaStorage` (disque local, R2), variantes AVIF/WebP.
 - **a — P1-04** Produits et variantes : CRUD, SKU, coûts, statuts, SEO, duplication.
-- **b — P1-05** Offres par quantité, upsell et cross-sell (modèle + admin).
+- **b — P1-05** Offres par quantité, upsell et cross-sell (modèle + admin) ; la duplication d'un
+  produit copie aussi ses offres.
 - **b — P1-06 ★** Codes promo (montant/pourcentage, plafond, période, usage ; recalcul serveur).
 - **c — P1-07** Frais de livraison par boutique × wilaya × type × transporteur ; wilayas 59–69 :
   frais par défaut de la wilaya mère (`legacyWilayaCode`), le transporteur facturant sur 58.
 - **P1-08** Dette : validation Zod des réponses de l'API dans l'admin (schémas partagés).
-- **d — P1-09** Package `blocks` v1 + page produit (ex-P2-01, P2-02) : Lighthouse mobile ≥ 90.
+- **d — P1-09** Package `blocks` v1 + page produit (ex-P2-01, P2-02) : Lighthouse mobile ≥ 90 ;
+  produits de démo dans le seed.
 - **e — P1-10** Formulaire COD (ex-P2-03) : recherche de commune par nom qui propose la bonne
   wilaya (anciens noms, ancienne wilaya : « Aflou » choisi sous « Laghouat »).
 - **e — P1-11** Création de commande idempotente (ex-P2-04) + capture UTM/fbclid/ttclid et
@@ -190,7 +192,9 @@ parenthèses ; les tâches ★ n'existaient pas dans la roadmap initiale.
 - **f — P1-12** Anti-fraude v1 (ex-P2-05, skill `cod-antifraude`).
 - **g — P1-13 ★** Formulaires abandonnés (saisie partielle consentie, relance par l'OMS).
 - **h — P1-14** Page merci + upsell 1 clic (ex-P2-06) ; **★** page de suivi client.
-- **i — P1-15 ★** Personnalisation de base et pages légales (mentions, CGV, confidentialité).
+- **i — P1-15 ★** Personnalisation de base et pages légales (mentions, CGV, confidentialité) ;
+  catégories de produits (PRD §5, « catégorie optionnelle », reportée de P1-04 : utile à la page
+  d'accueil).
 - **P1-16** Budgets de performance et e2e du parcours complet (ex-P2-08).
 - **Checkpoint 1** : commande passée depuis un vrai téléphone en 4G sur l'environnement de test ;
   double soumission ⇒ une commande ; une commande d'une nouvelle wilaya et une commune saisie

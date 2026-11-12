@@ -1,5 +1,6 @@
 import { corePackage } from '@dz/core';
 
+export * from './catalog.ts';
 export * from './rbac.ts';
 
 /** Identité du package. */

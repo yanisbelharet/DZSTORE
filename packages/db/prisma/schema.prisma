@@ -83,6 +83,8 @@ model Store {
   counters   StoreCounter[]
   userAccess UserStoreAccess[]
   media      Media[]
+  products   Product[]
+  variants   ProductVariant[]
 }
 
 model StoreDomain {
@@ -364,7 +366,74 @@ model Media {
   createdAt     DateTime    @default(now()) @db.Timestamptz(3)
   updatedAt     DateTime    @updatedAt @db.Timestamptz(3)
 
-  store Store @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  store    Store          @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  products ProductMedia[]
 
   @@index([storeId, createdAt(sort: Desc), id(sort: Desc)])
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+/// Catalogue (PRD §5). Localised texts and options are JSON validated by Zod (@dz/contracts).
+model Product {
+  id        String        @id @default(uuid(7)) @db.Uuid
+  storeId   String        @db.Uuid
+  slug      String
+  name      String // nom interne (admin)
+  status    ProductStatus @default(DRAFT)
+  content   Json // { title: {ar,fr}, description: {ar,fr} }
+  options   Json          @default("[]") // [{ key, name: {ar,fr}, values: [{ key, label: {ar,fr} }] }]
+  seo       Json          @default("{}") // { title: {ar,fr}, description: {ar,fr}, ogImageMediaId }
+  createdAt DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime      @updatedAt @db.Timestamptz(3)
+
+  store    Store            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  variants ProductVariant[]
+  media    ProductMedia[]
+
+  @@unique([storeId, slug])
+  @@index([storeId, status])
+  @@index([storeId, updatedAt(sort: Desc), id(sort: Desc)])
+}
+
+model ProductVariant {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  productId         String   @db.Uuid
+  storeId           String   @db.Uuid // dénormalisé pour l'unicité du SKU
+  sku               String
+  options           Json     @default("{}") // { color: "black", size: "l" } (clés des options)
+  price             Int
+  compareAtPrice    Int?
+  costPrice         Int
+  weightGrams       Int?
+  carrierProductRef String? // référence produit chez le transporteur (stock délocalisé)
+  isActive          Boolean  @default(true)
+  position          Int      @default(0)
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+
+  product Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store   Store          @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  media   ProductMedia[]
+
+  @@unique([storeId, sku])
+  @@index([productId])
+}
+
+model ProductMedia {
+  productId String  @db.Uuid
+  mediaId   String  @db.Uuid
+  variantId String? @db.Uuid
+  position  Int     @default(0)
+
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  media   Media           @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@id([productId, mediaId])
+  @@index([mediaId])
 }

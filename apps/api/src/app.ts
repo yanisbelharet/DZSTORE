@@ -36,6 +36,7 @@ import { geoRoutes } from './modules/geo/routes.ts';
 import { mediaJobs } from './modules/media/jobs.ts';
 import { localMediaFilesRoutes, mediaRoutes } from './modules/media/routes.ts';
 import { createMediaStorage } from './modules/media/service.ts';
+import { productsRoutes } from './modules/products/routes.ts';
 import type { MediaStorage } from './modules/media/storage.ts';
 import { storesRoutes } from './modules/stores/routes.ts';
 import { usersRoutes } from './modules/users/routes.ts';
@@ -159,6 +160,10 @@ export async function buildApp({
   await app.register(mediaRoutes, {
     prefix: '/v1/stores/:storeId/media',
     deps: { db, clock, jobs, storage: media },
+  });
+  await app.register(productsRoutes, {
+    prefix: '/v1/stores/:storeId/products',
+    deps: { db, storage: media },
   });
   if (media && config.media.driver === 'local') {
     await app.register(localMediaFilesRoutes, { prefix: '/media', storage: media });

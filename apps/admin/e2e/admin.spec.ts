@@ -142,6 +142,65 @@ test.describe.serial('admin — parcours OWNER puis agent', () => {
     await expect(image).toHaveJSProperty('complete', true);
     await expect(image).toHaveJSProperty('naturalWidth', 1);
     await page.screenshot({ path: `${SHOTS}/media-desktop.png`, fullPage: true });
+
+    // Catalogue (P1-04): publication rules, image, options → variants, duplication.
+    await page.getByRole('navigation').getByRole('link', { name: 'Produits' }).click();
+    await expect(page.getByRole('heading', { name: `Produits — ${STORE.name}` })).toBeVisible();
+    const nav = page.getByRole('navigation');
+    await expect(nav.getByRole('link', { name: 'Produits' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(nav.getByRole('link', { name: 'Boutiques' })).not.toHaveAttribute('aria-current');
+    await page.getByRole('link', { name: 'Nouveau produit' }).click();
+    await page.getByLabel('Nom interne').fill('Crème hydratante');
+    await expect(page.getByLabel('Adresse (slug)')).toHaveValue('creme-hydratante');
+    await page.getByLabel('Titre (français) *').fill('Crème hydratante');
+    await page.getByLabel('Statut', { exact: true }).selectOption('ACTIVE');
+    await page.getByLabel('Prix — Crème hydratante').fill('2500');
+    await page.getByLabel('Prix barré — Crème hydratante').fill('3200');
+    await page.getByLabel('Coût — Crème hydratante').fill('900');
+    await page.getByRole('button', { name: 'Ajouter depuis la médiathèque' }).click();
+    await page
+      .getByRole('button', { name: 'Ajouter l’image Crème hydratante'.replace('’', "'") })
+      .click();
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page.getByRole('alert')).toContainText('Titre manquant en ar.');
+    await page.getByLabel('Titre (arabe) *').fill('كريم مرطب');
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page.getByText('Produit créé')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Crème hydratante' })).toBeVisible();
+    await expect(page.getByText('En vente').first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Ajouter une option' }).click();
+    await page.getByLabel("Nom de l'option (français)").fill('Contenance');
+    await page.getByLabel('Valeur 1 (français)').fill('50 ml');
+    await page.getByRole('button', { name: 'Ajouter une valeur' }).click();
+    await page.getByLabel('Valeur 2 (français)').fill('100 ml');
+    // The former single variant becomes the first combination, amounts kept.
+    await expect(page.getByLabel('SKU — 50 ml')).toHaveValue('CREME-HYDRATANTE');
+    await expect(page.getByLabel('Prix — 50 ml')).toHaveValue('2500');
+    await expect(page.getByLabel('Coût — 100 ml')).toHaveValue('900');
+    await page.getByLabel('SKU — 50 ml').fill('CRM-50');
+    await page.getByLabel('SKU — 100 ml').fill('CRM-100');
+    await page.getByLabel('Prix — 100 ml').fill('4200');
+    await page.getByLabel('Prix barré — 100 ml').fill('');
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page.getByText('Produit enregistré')).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel('SKU — 100 ml')).toHaveValue('CRM-100');
+    await expect(page.getByLabel('Prix — 100 ml')).toHaveValue('4200');
+    await page.screenshot({ path: `${SHOTS}/product-form-desktop.png`, fullPage: true });
+
+    await page.getByRole('button', { name: 'Dupliquer' }).click();
+    await expect(page.getByText('Copie créée (brouillon)')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Crème hydratante (copie)' })).toBeVisible();
+    await expect(page.getByLabel('SKU — 100 ml')).toHaveValue('CRM-100-C1');
+    await page.getByRole('navigation').getByRole('link', { name: 'Produits' }).click();
+    await expect(page.getByRole('link', { name: 'Crème hydratante', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Crème hydratante (copie)' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '2 500 DA – 4 200 DA' }).first()).toBeVisible();
+    await page.screenshot({ path: `${SHOTS}/products-desktop.png`, fullPage: true });
   });
 
   test('agent : pas d’accès à la gestion des utilisateurs', async ({ page }) => {
