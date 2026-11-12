@@ -114,7 +114,18 @@ function StoreForm({ store }: { store: AdminStore }) {
 
   return (
     <>
-      <PageHeader title={t('stores.settings', { name: store.name })} />
+      <PageHeader
+        title={t('stores.settings', { name: store.name })}
+        actions={
+          can(me, 'catalog.read') ? (
+            <Button asChild variant="secondary">
+              <Link to="/stores/$storeId/media" params={{ storeId: store.id }}>
+                {t('media.open')}
+              </Link>
+            </Button>
+          ) : null
+        }
+      />
       <form
         className="grid max-w-2xl gap-6"
         onSubmit={(event) => {

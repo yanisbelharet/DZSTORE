@@ -23,6 +23,7 @@ const usersPage = (name: 'UsersPage' | 'UserFormPage') =>
 const AccountPage = lazyRouteComponent(() => import('./pages/account.tsx'), 'AccountPage');
 const storesPage = (name: 'StoresPage' | 'StoreSettingsPage') =>
   lazyRouteComponent(() => import('./pages/stores.tsx'), name);
+const MediaPage = lazyRouteComponent(() => import('./pages/media.tsx'), 'MediaPage');
 const SystemPage = lazyRouteComponent(() => import('./pages/system.tsx'), 'SystemPage');
 
 interface RouterContext {
@@ -120,6 +121,12 @@ const storeSettingsRoute = createRoute({
   beforeLoad: requirePermission('stores.read'),
   component: storesPage('StoreSettingsPage'),
 });
+const storeMediaRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/stores/$storeId/media',
+  beforeLoad: requirePermission('catalog.read'),
+  component: MediaPage,
+});
 const accountRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/account',
@@ -148,6 +155,7 @@ const routeTree = rootRoute.addChildren([
     userEditRoute,
     storesRoute,
     storeSettingsRoute,
+    storeMediaRoute,
     accountRoute,
     systemRoute,
     forbiddenRoute,

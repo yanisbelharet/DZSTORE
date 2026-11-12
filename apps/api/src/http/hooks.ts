@@ -14,7 +14,10 @@ export function registerResponseHeaders<L extends FastifyBaseLogger, P extends F
     reply.header('x-content-type-options', 'nosniff');
     reply.header('x-frame-options', 'DENY');
     reply.header('referrer-policy', 'no-referrer');
-    reply.header('cross-origin-resource-policy', 'same-origin');
+    // Same-origin unless a route opts in (public media files are embedded by other origins).
+    if (!reply.hasHeader('cross-origin-resource-policy')) {
+      reply.header('cross-origin-resource-policy', 'same-origin');
+    }
     // Swagger UI (never in production) needs scripts and styles.
     if (!request.url.startsWith('/docs')) reply.header('content-security-policy', API_CSP);
     if (!reply.hasHeader('cache-control')) reply.header('cache-control', 'no-store');

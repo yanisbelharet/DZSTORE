@@ -3,6 +3,10 @@ import type { Page } from '@playwright/test';
 
 import { AGENT, OWNER, STORE, totpNow } from './fixtures.ts';
 
+/** 1×1 PNG (valid image bytes for the upload path). */
+const PIXEL_PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
 const SHOTS = 'test-results/screenshots';
 
 async function login(page: Page, email: string, password: string) {
@@ -111,6 +115,33 @@ test.describe.serial('admin — parcours OWNER puis agent', () => {
     await expect(page.getByLabel('Préfixe des numéros de commande')).toHaveValue('BT');
     await expect(page.getByLabel('Langue par défaut')).toHaveValue('fr');
     await page.screenshot({ path: `${SHOTS}/store-settings-desktop.png`, fullPage: true });
+
+    // Media library (P1-03): upload, background processing (job round), alternative text.
+    await page.getByRole('link', { name: 'Médiathèque' }).click();
+    await expect(page.getByText("Aucune image pour l'instant.")).toBeVisible();
+    await page.getByLabel('Ajouter des images').setInputFiles({
+      name: 'produit.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(PIXEL_PNG, 'base64'),
+    });
+    await expect(page.getByText('1 image(s) ajoutée(s)')).toBeVisible();
+    await expect(page.getByText('En traitement')).toBeVisible();
+    const mediaUrl = page.url();
+    await page.getByRole('navigation').getByRole('link', { name: 'Système' }).click();
+    await page.getByRole('button', { name: 'Lancer un tour de traitement' }).click();
+    await expect(page.getByTestId('tick-dead')).toHaveText('0');
+    await page.goto(mediaUrl);
+    await expect(page.getByText('Prête')).toBeVisible();
+    await expect(page.getByText('2 variantes')).toBeVisible();
+    await page.getByLabel('Texte alternatif (français)').fill('Crème hydratante');
+    await page.getByRole('button', { name: 'Enregistrer le texte' }).click();
+    await expect(page.getByText('Texte alternatif enregistré')).toBeVisible();
+    const image = page.getByRole('img', { name: 'Crème hydratante' });
+    await expect(image).toBeVisible();
+    // Really decoded (not a broken image): served cross-origin by the API.
+    await expect(image).toHaveJSProperty('complete', true);
+    await expect(image).toHaveJSProperty('naturalWidth', 1);
+    await page.screenshot({ path: `${SHOTS}/media-desktop.png`, fullPage: true });
   });
 
   test('agent : pas d’accès à la gestion des utilisateurs', async ({ page }) => {

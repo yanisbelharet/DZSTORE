@@ -22,6 +22,7 @@ export function testConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
     cookieSecure: true,
     tickSecret: undefined,
     storeServiceToken: undefined,
+    media: { driver: 'disabled' },
     ...overrides,
   };
 }

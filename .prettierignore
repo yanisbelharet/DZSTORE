@@ -5,6 +5,10 @@ docs/integrations/*.json
 **/coverage/
 **/.turbo/
 **/.astro/
+**/.vercel/
+**/.vercel-build/
+**/test-results/
+**/var/
 
 # La documentation Markdown est maintenue à la main (tableaux, diagrammes)
 **/*.md

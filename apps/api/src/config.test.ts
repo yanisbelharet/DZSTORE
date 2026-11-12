@@ -68,4 +68,32 @@ describe('configuration de l’API', () => {
     );
     expect(() => loadApiConfig({ ...base, APP_ENCRYPTION_KEYS: '1:short' })).toThrow(AppError);
   });
+  it('médias : disque local par défaut, désactivés sur Vercel, R2 complet exigé', () => {
+    expect(loadApiConfig(base).media).toEqual({
+      driver: 'local',
+      directory: 'var/media',
+      publicBaseUrl: 'http://localhost:3000/media',
+    });
+    expect(loadApiConfig({ ...base, VERCEL: '1' }).media).toEqual({ driver: 'disabled' });
+    expect(() => loadApiConfig({ ...base, MEDIA_DRIVER: 'r2', R2_BUCKET: 'dz-media' })).toThrow(
+      AppError,
+    );
+    expect(loadApiConfig({ ...base, NODE_ENV: 'production' }).media).toEqual({
+      driver: 'disabled',
+    });
+    expect(() => loadApiConfig({ ...base, NODE_ENV: 'production', MEDIA_DRIVER: 'local' })).toThrow(
+      /MEDIA_PUBLIC_BASE_URL/u,
+    );
+    const r2 = loadApiConfig({
+      ...base,
+      VERCEL: '1',
+      MEDIA_DRIVER: 'r2',
+      R2_ACCOUNT_ID: 'a'.repeat(32),
+      R2_BUCKET: 'dz-media',
+      R2_ACCESS_KEY_ID: 'id',
+      R2_SECRET_ACCESS_KEY: 'secret',
+      MEDIA_PUBLIC_BASE_URL: 'https://media.example.dz',
+    }).media;
+    expect(r2).toMatchObject({ driver: 'r2', bucket: 'dz-media' });
+  });
 });

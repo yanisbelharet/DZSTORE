@@ -67,7 +67,39 @@ export const apiEnvSchema = baseEnvSchema.extend({
   TICK_SECRET: z.string().min(32, { error: 'at least 32 characters' }).optional(),
   /** Shared with the storefront server for `/v1/public/*`. Unset = those routes refuse all calls. */
   STORE_SERVICE_TOKEN: z.string().min(32, { error: 'at least 32 characters' }).optional(),
+  /**
+   * Media storage (ADR-0017): `local` disk, Cloudflare `r2`, or `disabled` (uploads answer 503).
+   * Default: `local`, except on Vercel (read-only disk) where it is `disabled`.
+   */
+  MEDIA_DRIVER: z.enum(['local', 'r2', 'disabled']).optional(),
+  MEDIA_LOCAL_DIR: z.string().min(1).default('var/media'),
+  /** Public base URL of media files (CDN). Local default: `http://localhost:<PORT>/media`. */
+  MEDIA_PUBLIC_BASE_URL: z.url({ protocol: /^https?$/u }).optional(),
+  R2_ACCOUNT_ID: z
+    .string()
+    .regex(/^[0-9a-f]{32}$/u, { error: 'expected a Cloudflare account id' })
+    .optional(),
+  R2_BUCKET: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/u)
+    .optional(),
+  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  /** Set by Vercel on its build and runtime. */
+  VERCEL: z.string().optional(),
 });
+
+export type MediaConfig =
+  | { driver: 'disabled' }
+  | { driver: 'local'; directory: string; publicBaseUrl: string }
+  | {
+      driver: 'r2';
+      accountId: string;
+      bucket: string;
+      accessKeyId: string;
+      secretAccessKey: string;
+      publicBaseUrl: string;
+    };
 
 export interface ApiConfig {
   nodeEnv: 'development' | 'test' | 'production';
@@ -85,6 +117,70 @@ export interface ApiConfig {
   cookieSecure: boolean;
   tickSecret: string | undefined;
   storeServiceToken: string | undefined;
+  media: MediaConfig;
+}
+
+type ApiEnv = z.output<typeof apiEnvSchema>;
+
+function mediaConfig(env: ApiEnv): MediaConfig {
+  // Unset: local disk, except where no public URL can be derived (Vercel's read-only disk,
+  // production without MEDIA_PUBLIC_BASE_URL): media are then disabled, never half-working.
+  const fallback =
+    env.VERCEL === '1' || (env.NODE_ENV === 'production' && env.MEDIA_PUBLIC_BASE_URL === undefined)
+      ? 'disabled'
+      : 'local';
+  const driver = env.MEDIA_DRIVER ?? fallback;
+  if (driver === 'disabled') return { driver };
+  if (driver === 'local') {
+    if (env.NODE_ENV === 'production' && env.MEDIA_PUBLIC_BASE_URL === undefined) {
+      throw new AppError(
+        'INVALID_CONFIGURATION',
+        'MEDIA_PUBLIC_BASE_URL is required in production',
+        {
+          details: { variables: ['MEDIA_PUBLIC_BASE_URL'] },
+        },
+      );
+    }
+    return {
+      driver,
+      directory: env.MEDIA_LOCAL_DIR,
+      publicBaseUrl: env.MEDIA_PUBLIC_BASE_URL ?? `http://localhost:${String(env.PORT)}/media`,
+    };
+  }
+  const {
+    R2_ACCOUNT_ID,
+    R2_BUCKET,
+    R2_ACCESS_KEY_ID,
+    R2_SECRET_ACCESS_KEY,
+    MEDIA_PUBLIC_BASE_URL,
+  } = env;
+  if (
+    R2_ACCOUNT_ID === undefined ||
+    R2_BUCKET === undefined ||
+    R2_ACCESS_KEY_ID === undefined ||
+    R2_SECRET_ACCESS_KEY === undefined ||
+    MEDIA_PUBLIC_BASE_URL === undefined
+  ) {
+    throw new AppError('INVALID_CONFIGURATION', 'MEDIA_DRIVER=r2 needs every R2_* variable', {
+      details: {
+        variables: [
+          'R2_ACCOUNT_ID',
+          'R2_BUCKET',
+          'R2_ACCESS_KEY_ID',
+          'R2_SECRET_ACCESS_KEY',
+          'MEDIA_PUBLIC_BASE_URL',
+        ],
+      },
+    });
+  }
+  return {
+    driver,
+    accountId: R2_ACCOUNT_ID,
+    bucket: R2_BUCKET,
+    accessKeyId: R2_ACCESS_KEY_ID,
+    secretAccessKey: R2_SECRET_ACCESS_KEY,
+    publicBaseUrl: MEDIA_PUBLIC_BASE_URL,
+  };
 }
 
 export function loadApiConfig(source: EnvSource = process.env): ApiConfig {
@@ -121,5 +217,6 @@ export function loadApiConfig(source: EnvSource = process.env): ApiConfig {
     cookieSecure: env.SESSION_COOKIE_SECURE,
     tickSecret: env.TICK_SECRET,
     storeServiceToken: env.STORE_SERVICE_TOKEN,
+    media: mediaConfig(env),
   };
 }

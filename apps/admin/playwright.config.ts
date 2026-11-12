@@ -38,6 +38,7 @@ export default defineConfig({
         PORT: String(API_PORT),
         DATABASE_URL: e2eDatabaseUrl,
         APP_ENCRYPTION_KEYS: `1:${Buffer.alloc(32, 42).toString('base64')}`,
+        MEDIA_LOCAL_DIR: 'test-results/media',
       },
     },
     {

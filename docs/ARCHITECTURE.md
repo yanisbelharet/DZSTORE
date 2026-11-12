@@ -280,6 +280,7 @@ erDiagram
 | Limitation de débit | table `UNLOGGED rate_limit_bucket` gérée en SQL brut |
 | `User` | `CHECK ("failedTwoFactorCount" >= 0)` (compteur d'échecs 2FA, verrouillage au plafond) |
 | `Wilaya` / `Commune` | `CHECK (id BETWEEN 1 AND 99)` / `CHECK (id > 0)` ; commune = numéro Wikidata stable |
+| `Media` | `CHECK (width > 0 AND height > 0 AND bytes > 0)`, `CHECK (jsonb_typeof(variants) = 'array')` |
 | `Commune` / `GeoAlias` | `CHECK ("legacyWilayaId" BETWEEN 1 AND 58)` / `CHECK (lang IN ('ar','fr'))` |
 | `Job` | index partiel `("priority" DESC, "runAt", "id") WHERE status = 'PENDING'` (prise du prochain job) |
 

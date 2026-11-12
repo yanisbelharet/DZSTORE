@@ -141,7 +141,10 @@
     "UNAUTHENTICATED": "Votre session a expiré. Reconnectez-vous.",
     "TOO_SHORT": "Le mot de passe doit contenir au moins 12 caractères.",
     "SAME_AS_EMAIL": "Le mot de passe ne doit pas être votre e-mail.",
-    "LOW_VARIETY": "Le mot de passe est trop simple."
+    "LOW_VARIETY": "Le mot de passe est trop simple.",
+    "PAYLOAD_TOO_LARGE": "Fichier trop volumineux.",
+    "UNSUPPORTED_MEDIA_TYPE": "Format non pris en charge : JPEG, PNG, WebP ou AVIF uniquement.",
+    "UNAVAILABLE": "Service momentanément indisponible (stockage des médias non configuré ?)."
   },
   "environment": {
     "test": "Environnement de test — aucune vente réelle"
@@ -210,5 +213,28 @@
     "primary": "Principal",
     "noDomain": "Aucun domaine",
     "saved": "Paramètres enregistrés"
+  },
+  "media": {
+    "title": "Médiathèque — {{name}}",
+    "open": "Médiathèque",
+    "upload": "Ajouter des images",
+    "uploadHint": "JPEG, PNG, WebP ou AVIF, 4 Mo au plus par image. Les métadonnées (position GPS, appareil) sont supprimées. Les versions AVIF/WebP sont générées par le traitement des jobs.",
+    "uploading": "Envoi de {{count}} image(s)…",
+    "uploaded": "{{count}} image(s) ajoutée(s)",
+    "tooLarge": "« {{name}} » dépasse 4 Mo.",
+    "empty": "Aucune image pour l'instant.",
+    "status": {
+      "PROCESSING": "En traitement",
+      "READY": "Prête",
+      "FAILED": "Échec"
+    },
+    "variants": "{{count}} variantes",
+    "delete": "Supprimer",
+    "deleteConfirm": "L'image et toutes ses versions seront supprimées définitivement.",
+    "deleted": "Image supprimée",
+    "altAr": "Texte alternatif (arabe)",
+    "altFr": "Texte alternatif (français)",
+    "saveAlt": "Enregistrer le texte",
+    "altSaved": "Texte alternatif enregistré"
   }
 }

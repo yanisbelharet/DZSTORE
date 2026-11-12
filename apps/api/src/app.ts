@@ -33,6 +33,10 @@ import { auditRoutes } from './modules/audit/routes.ts';
 import { authRoutes } from './modules/auth/routes.ts';
 import { publicStoresRoutes } from './modules/stores/public-routes.ts';
 import { geoRoutes } from './modules/geo/routes.ts';
+import { mediaJobs } from './modules/media/jobs.ts';
+import { localMediaFilesRoutes, mediaRoutes } from './modules/media/routes.ts';
+import { createMediaStorage } from './modules/media/service.ts';
+import type { MediaStorage } from './modules/media/storage.ts';
 import { storesRoutes } from './modules/stores/routes.ts';
 import { usersRoutes } from './modules/users/routes.ts';
 import { healthRoutes } from './routes/health.ts';
@@ -46,6 +50,8 @@ export interface AppDependencies {
   /** Resolves when the database answers; used by `/ready` (default: `SELECT 1`). */
   checkDatabase?: () => Promise<void>;
   readyTimeoutMs?: number;
+  /** Media storage (default: from `config.media`; `null` = media disabled). */
+  media?: MediaStorage | null;
   /** Job engine (default: built-in jobs and schedules). */
   jobs?: JobEngine;
 }
@@ -55,16 +61,18 @@ export function createDefaultJobEngine({
   db,
   clock,
   logger,
+  media,
 }: {
   db: DbClient;
   clock: Clock;
   logger: Logger;
+  media: MediaStorage | undefined;
 }): JobEngine {
   return createJobEngine({
     db,
     clock,
     logger,
-    registry: new JobRegistry([...maintenanceJobs, ...systemJobs]),
+    registry: new JobRegistry([...maintenanceJobs, ...systemJobs, ...mediaJobs(media)]),
     subscriptions: systemSubscriptions,
     schedules: maintenanceSchedules,
   });
@@ -89,8 +97,12 @@ export async function buildApp({
     await db.$queryRaw`SELECT 1`;
   },
   readyTimeoutMs = 2_000,
-  jobs = createDefaultJobEngine({ db, clock, logger }),
+  media: mediaOverride,
+  jobs: jobsOverride,
 }: AppDependencies) {
+  const media =
+    mediaOverride === undefined ? createMediaStorage(config.media) : (mediaOverride ?? undefined);
+  const jobs = jobsOverride ?? createDefaultJobEngine({ db, clock, logger, media });
   const app = fastify({
     loggerInstance: logger,
     // Fastify's per-request logs are replaced by our access log (no IP, no query string).
@@ -144,6 +156,13 @@ export async function buildApp({
   await app.register(usersRoutes, { prefix: '/v1/users', deps: { db, clock } });
   await app.register(storesRoutes, { prefix: '/v1/stores', db });
   await app.register(geoRoutes, { prefix: '/v1/geo', db });
+  await app.register(mediaRoutes, {
+    prefix: '/v1/stores/:storeId/media',
+    deps: { db, clock, jobs, storage: media },
+  });
+  if (media && config.media.driver === 'local') {
+    await app.register(localMediaFilesRoutes, { prefix: '/media', storage: media });
+  }
   await app.register(publicStoresRoutes, { prefix: '/v1/public/stores', db });
   await app.register(auditRoutes, { prefix: '/v1/audit', db });
   await app.register(jobsRoutes, { prefix: '/v1/jobs', db, jobs, clock });

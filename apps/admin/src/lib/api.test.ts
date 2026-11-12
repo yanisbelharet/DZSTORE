@@ -23,6 +23,16 @@ describe('client API', () => {
     expect(init.body).toBe('{"a":1}');
   });
 
+  it('envoie un fichier en octets bruts avec son propre type', async () => {
+    const fetchMock = respond(201, { id: 'm' });
+    vi.stubGlobal('fetch', fetchMock);
+    const file = new Blob([new Uint8Array([1, 2])], { type: 'image/png' });
+    await api('/v1/stores/s/media', { method: 'POST', body: file });
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.headers).toMatchObject({ 'content-type': 'image/png', 'x-dz-csrf': '1' });
+    expect(init.body).toBe(file);
+  });
+
   it('transforme l’enveloppe d’erreur de l’API en ApiError', async () => {
     vi.stubGlobal(
       'fetch',

@@ -84,6 +84,11 @@ export default defineConfig(
       '**/.turbo/**',
       '**/.astro/**',
       '**/src/generated/**',
+      // Build outputs and local files (gitignored): Vercel bundle, e2e results, local media.
+      '**/.vercel/**',
+      '**/.vercel-build/**',
+      '**/test-results/**',
+      '**/var/**',
       'docs/**',
     ],
   },

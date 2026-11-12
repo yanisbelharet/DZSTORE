@@ -48,6 +48,9 @@ export async function api<T>(
   path: string,
   { method = 'GET', body, signal }: RequestOptions = {},
 ): Promise<T> {
+  // A Blob (file) is sent as raw bytes with its own type; anything else as JSON.
+  const isFile = body instanceof Blob;
+  const contentType = isFile ? body.type : 'application/json';
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {
@@ -56,9 +59,9 @@ export async function api<T>(
       headers: {
         accept: 'application/json',
         'x-dz-csrf': '1',
-        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+        ...(body === undefined ? {} : { 'content-type': contentType }),
       },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(body === undefined ? {} : { body: isFile ? body : JSON.stringify(body) }),
       ...(signal ? { signal } : {}),
     });
   } catch (error) {
@@ -84,6 +87,9 @@ const KNOWN_CODES = [
   'FORBIDDEN',
   'NOT_FOUND',
   'UNAUTHENTICATED',
+  'PAYLOAD_TOO_LARGE',
+  'UNSUPPORTED_MEDIA_TYPE',
+  'UNAVAILABLE',
 ] as const;
 const KNOWN_VIOLATIONS = ['TOO_SHORT', 'SAME_AS_EMAIL', 'LOW_VARIETY'] as const;
 

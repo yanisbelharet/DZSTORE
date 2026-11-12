@@ -29,8 +29,8 @@ await build({
   ssr: {
     target: 'node',
     noExternal: true,
-    // Native addon (prebuilt per platform) and pg's optional native driver (unused).
-    external: ['@node-rs/argon2', 'pg-native'],
+    // Native addons (prebuilt per platform) and pg's optional native driver (unused).
+    external: ['@node-rs/argon2', 'sharp', 'pg-native'],
   },
 });
 process.stdout.write(`Serverless bundle written to ${VERCEL_BUNDLE_DIR}/server.mjs\n`);

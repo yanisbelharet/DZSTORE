@@ -2,19 +2,23 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 
 import { systemClock } from '@dz/core';
-import { baseEnvSchema, loadEnv } from '@dz/core/env';
 import { createLogger } from '@dz/core/logger';
 import { createDbClient } from '@dz/db';
-import { z } from 'zod';
 
 import { createDefaultJobEngine } from './app.ts';
+import { loadApiConfig } from './config.ts';
+import { createMediaStorage } from './modules/media/service.ts';
 
-const env = loadEnv(
-  baseEnvSchema.extend({ DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\//u) }),
-);
-const logger = createLogger({ name: 'worker', level: env.LOG_LEVEL });
-const db = createDbClient({ url: env.DATABASE_URL, maxConnections: 5 });
-const jobs = createDefaultJobEngine({ db, clock: systemClock, logger });
+// Same configuration as the HTTP process: jobs need the same storage, keys and secrets.
+const config = loadApiConfig();
+const logger = createLogger({ name: 'worker', level: config.logLevel });
+const db = createDbClient({ url: config.databaseUrl, maxConnections: 5 });
+const jobs = createDefaultJobEngine({
+  db,
+  clock: systemClock,
+  logger,
+  media: createMediaStorage(config.media),
+});
 const IDLE_POLL_MS = 1_000;
 
 const stop = new AbortController();

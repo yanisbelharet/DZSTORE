@@ -114,6 +114,29 @@ gratuit, par exemple <https://cron-job.org> :
 
 Depuis l'admin, la page **Système** permet aussi de lancer un tour à la main.
 
+## 6 bis. Médias (facultatif, Cloudflare R2 gratuit)
+
+Sans R2, l'environnement de test fonctionne mais refuse les images (« stockage des médias non
+configuré ») : le disque de Vercel est en lecture seule.
+
+1. Cloudflare → **R2** → activer R2 (offre gratuite : 10 Go) → **Create bucket** `dzstore-media`.
+2. Bucket → **Settings → Public access → R2.dev subdomain → Allow** ; note l'URL publique
+   (`https://pub-….r2.dev`).
+3. R2 → **Manage R2 API Tokens → Create API token** : permission *Object Read & Write*, limité
+   au bucket `dzstore-media`. Note l'*Access Key ID* et le *Secret Access Key* (affiché une fois).
+4. Projet `dzstore-api` → variables (Production) :
+
+   | Variable | Valeur |
+   |---|---|
+   | `MEDIA_DRIVER` | `r2` |
+   | `R2_ACCOUNT_ID` | identifiant du compte Cloudflare (32 caractères, barre latérale de R2) |
+   | `R2_BUCKET` | `dzstore-media` |
+   | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | (étape 3) |
+   | `MEDIA_PUBLIC_BASE_URL` | l'URL publique de l'étape 2 |
+
+5. Redeploy. Les versions AVIF/WebP sont produites au tour de traitement suivant (cron toutes les
+   30 min, ou bouton « Lancer un tour de traitement » de la page Système).
+
 ## 7. Vérifications (critères d'acceptation de P0-12)
 
 1. Sur ton téléphone : `https://dzstore-beaute.vercel.app` (arabe, de droite à gauche) et

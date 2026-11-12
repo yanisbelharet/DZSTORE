@@ -175,6 +175,17 @@
   téléversement via l'API (taille et type contrôlés) ; job de génération AVIF + WebP à largeurs
   fixes (sharp) ; fichiers immuables servis via le CDN avec cache long ; `<picture>` avec
   `srcset`/`sizes` et dimensions explicites.
+- **Mise en œuvre (P1-03, 2026-11-12)** :
+  - téléversement en **octets bruts** (`POST /v1/stores/:storeId/media`, `Content-Type` image),
+    sans multipart, **4 Mo au plus** (limite de 4,5 Mo des fonctions Vercel) ; le format réel est
+    lu dans les octets ; l'original est **nettoyé** (orientation appliquée, métadonnées EXIF/GPS
+    supprimées) avant tout stockage ; garde-fou de 40 mégapixels ;
+  - variantes AVIF + WebP aux largeurs 320/640/960/1280/1920 (jamais plus larges que
+    l'original), job `media.process` idempotent (clés déterministes), échec ⇒ `FAILED` + motif ;
+  - R2 via son API compatible S3 avec une signature SigV4 maison (≈ 100 lignes, vérifiée sur
+    l'exemple officiel AWS) au lieu du SDK AWS (≈ 3 Mo) pour trois appels ;
+  - pilote `disabled` (Vercel sans R2, production sans URL publique) : 503 lisible plutôt
+    qu'un stockage à moitié fonctionnel ; pilote local servi par l'API sur `/media/*`.
 
 ## ADR-0018 — Pixels : serveur comme source de vérité, déduplication par `event_id`
 **Statut** : Acceptée (2026-11-01)

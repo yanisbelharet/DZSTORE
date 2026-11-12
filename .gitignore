@@ -31,3 +31,6 @@ Thumbs.db
 
 # Bundle serverless de l’API (Vercel, ADR-0025)
 .vercel-build/
+
+# Fichiers des médias en local (MEDIA_LOCAL_DIR)
+var/
